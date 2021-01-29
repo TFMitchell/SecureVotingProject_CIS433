@@ -5,7 +5,8 @@
  Authors: Kevin Kincaid, Thomas Mitchell
  **/
 
-
+import java.math.*;
+import java.util.*;
 
 public class Main
 {
@@ -13,27 +14,27 @@ public class Main
     {
         GUI myGUI = new GUI(); //set up the GUI
 
-        int size = 9; //size of keys
-        int sk[] = Crypto.secretKeyGen(size); //make the secret key
+        //setting up arbitrary bitlength and certainty (for Paillier_cryptosystem)
+        int bitLength = 256;
+        int certainty = 68;
 
-        //print the secret key
-        for (int i = 0; i < size + 1 ; i++)
-        {
-            System.out.printf("%d\n", sk[i]);
-        }
+        BigInteger r = new BigInteger(512, new Random()); //generate r
 
-        //make public key
-        int zMod = 25; //setting the zMod. I think it needs to be a power of a prime number.
-        int polyMod = 4; //x^polyMod will be used to divide the polynomials
-        int pk[][] = Crypto.publicKeyGen(size, sk, zMod, polyMod);
+        BigInteger keyPair[][] = Crypto.keyPairGen(bitLength, certainty); //keyPair[0] is the public key and keyPaid[1] is the secret key
 
-        for (int i = 0; i < 2; i++)
-        {
-            for (int c = 0; c < size + 1; c++)
-            {
-                //System.out.printf("%d\n", pk[i][c]);
-            }
-        }
+        BigInteger vote1 = new BigInteger("2"); //using numbers for voting right now
+
+        BigInteger encryptedVote1 = Crypto.encrypt(vote1, r, keyPair[0]); //encrypting vote1
+
+        BigInteger vote2 = new BigInteger("5"); //another vote
+
+        BigInteger encryptedVote2 = Crypto.encrypt(vote2, r, keyPair[0]); //encrypt the 2nd vote
+
+        //do some math
+        BigInteger sum = Crypto.addEncrypted(encryptedVote1, encryptedVote2, keyPair[0][0]);
+
+        //decrypt the sum and print
+        System.out.printf("%d\n", Crypto.decrypt(sum, keyPair[1], keyPair[0][0]));
 
     }
 

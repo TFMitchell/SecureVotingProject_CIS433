@@ -5,102 +5,91 @@
 
  Authors: Kevin Kincaid, Thomas Mitchell
 
- Polynomial multiplication code from: https://www.geeksforgeeks.org/multiply-two-polynomials-2/
-
  **/
 
+import java.math.*;
 import java.util.*;
-import static java.lang.Math.max;
 
 public class Crypto
 {
-    public static int[] secretKeyGen(int size)
+    public static BigInteger[][] keyPairGen(int bitLength, int certainty) //outputs [[n, g], [lambda, u]]
     {
-        int sk[] = new int[size + 1]; //return value
-        Random rand = new Random(); //init random
+        BigInteger rv[][] = new BigInteger[2][2]; //return value
+        BigInteger n, g, lambda, u; //declaring the four variables
 
-        //make a polynomial with random binary coefficients and constant
-        for (int i = 0; i < size + 1; i++)  //the + 1 is for the constant term
+        //making random p and q
+        BigInteger p = new BigInteger(bitLength / 2, certainty, new Random());
+        BigInteger q = new BigInteger(bitLength / 2, certainty, new Random());
+
+        n = p.multiply(q); //n is their sum
+        BigInteger nSquared = n.multiply(n); //nSquared is commonly used, so it gets its own variable
+
+        g = new BigInteger("2"); //sample g value is 2
+
+        //setting up return values for the public key
+        rv[0][0] = n;
+        rv[0][1] = g;
+
+        //finding lambda
+        lambda = p.subtract(BigInteger.ONE)
+                .multiply(q.subtract(BigInteger.ONE))
+                .divide(p.subtract(BigInteger.ONE)
+                .gcd(q.subtract(BigInteger.ONE)));
+
+        //finding u
+        u = g.modPow(lambda, nSquared)
+                .subtract(BigInteger.ONE)
+                .divide(n)
+                .modInverse(n);
+
+        //check to make sure the g we picked was useful
+        if (u.gcd(n).intValue() != 1)
         {
-            sk[i] = rand.nextInt(2);
+            System.out.printf("Bad g. Try another.\n");
+            System.exit(-1);
         }
 
-        return sk; //the secret key is in the form [constant, coefficient of power 1, ..., power size]
+        //return the secret portion of the key
+        rv[1][0] = lambda;
+        rv[1][1] = u;
+
+        return rv;
     }
 
-    public static int[][] publicKeyGen(int size, int[] secretKey, int zModulus, int polyModulus)
+    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger pk[])
     {
-        int pk[][] = new int[2][size + 1]; //rv
-        Random rand = new Random(); //init random
-        //the first component of the public key is the polynomial on the uniform distribution of the modulus
-        for (int i = 0; i < size + 1; i++)  //the + 1 is for the constant term
-        {
-            pk[0][i] = rand.nextInt(zModulus);
-        }
+        //makes the return statement easier to understand to declare here
+        BigInteger n = pk[0];
+        BigInteger g = pk[1];
+        BigInteger nSquared = n.multiply(n);
 
-        //the second component of the public key is obtained using the following formula:
-        //step 1: obtain a polynomial e with a normal coefficient distribution with mean 0 and std div 2 discretized
-        //step 2: multiply the negative of each coefficient first component of the public key (which we found earlier) by the secret key
-        //step 3: subtract from that product the normal distribution polynomial e
-
-        int[] e = new int[size + 1];
-
-        //step 1:
-        for (int i = 0; i < size + 1; i++)  //the + 1 is for the constant term
-        {
-            e[i] = (int) rand.nextGaussian() * 2;
-        }
-
-        //step 2:
-        //for
-
-        return null;
+        return g.modPow(m, nSquared)
+                .multiply(r.modPow(n, nSquared))
+                .mod(nSquared);
     }
 
-    //taken from GeeksForGeeks
-    static int[] multiply(int A[], int B[],
-                          int m, int n)
+
+    public static BigInteger decrypt(BigInteger c, BigInteger sk[], BigInteger n)
     {
-        int[] prod = new int[m + n - 1];
+        //makes the return statement easier to understand to declare here
+        BigInteger lambda = sk[0];
+        BigInteger u = sk[1];
+        BigInteger nSquared = n.multiply(n);
 
-        // Initialize the product polynomial
-        for (int i = 0; i < m + n - 1; i++)
-        {
-            prod[i] = 0;
-        }
-
-        // Multiply two polynomials term by term
-        // Take ever term of first polynomial
-        for (int i = 0; i < m; i++)
-        {
-            // Multiply the current term of first polynomial
-            // with every term of second polynomial.
-            for (int j = 0; j < n; j++)
-            {
-                prod[i + j] += A[i] * B[j];
-            }
-        }
-
-        return prod;
+        return c.modPow(lambda, nSquared)
+                .subtract(BigInteger.ONE)
+                .divide(n)
+                .multiply(u)
+                .mod(n);
     }
 
-    static int[] add(int A[], int B[], int m, int n)
+    //this adds two encrypted ciphertexts together
+    public static BigInteger addEncrypted(BigInteger one, BigInteger two, BigInteger n)
     {
-        int size = max(m, n);
-        int sum[] = new int[size];
+        BigInteger nSquared = n.multiply(n); //for simpler return statement
 
-        // Initialize the product polynomial
-        for (int i = 0; i < m; i++)
-        {
-            sum[i] = A[i];
-        }
-
-        // Take every term of first polynomial
-        for (int i = 0; i < n; i++)
-        {
-            sum[i] += B[i];
-        }
-
-        return sum;
+        return one.multiply(two)
+                .mod(nSquared);
     }
+
 }
