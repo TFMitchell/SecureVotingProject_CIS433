@@ -88,8 +88,13 @@ public class Crypto
     {
         BigInteger nSquared = n.multiply(n); //for simpler return statement
 
-        return one.multiply(two)
-                .mod(nSquared);
+        if (one.equals(new BigInteger("0")))
+            return two;
+        else if (two.equals(new BigInteger("0")))
+            return one;
+        else
+            return one.multiply(two)
+                    .mod(nSquared);
     }
 
 }
