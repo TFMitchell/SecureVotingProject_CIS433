@@ -1,7 +1,7 @@
 /**
- GUI.java
+ ServerGUI.java
 
- Contains everything to do with the GUI
+ Contains everything to do with the Server GUI
 
  Authors: Kevin Kincaid, Thomas Mitchell
 
@@ -13,10 +13,10 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-public class GUI
+public class ServerGUI
 {
 
-    public GUI()
+    public ServerGUI()
     {
 
         //Create the frame.
