@@ -25,6 +25,12 @@ public class ClientGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+
+
+
+
+
+
         //After Voting Screen
         /*  After receipt
         JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
@@ -78,19 +84,15 @@ public class ClientGUI
 
         JRadioButton option1 = new JRadioButton("Inn C. Umbent");
         JRadioButton option2 = new JRadioButton("Sal Enger");
-        JRadioButton option3 = new JRadioButton("Noah Chance");
         option1.setBounds(100, 180, 150, 40);
         option1.setFont(new Font("Tacoma",Font.PLAIN, 16));
-        option2.setBounds(275, 180, 150, 40);
+        option2.setBounds(375, 180, 150, 40);
         option2.setFont(new Font("Tacoma",Font.PLAIN, 16));
-        option3.setBounds(450, 180, 150, 40);
-        option3.setFont(new Font("Tacoma",Font.PLAIN, 16));
 
         ButtonGroup group = new ButtonGroup();
 
         group.add(option1);
         group.add(option2);
-        group.add(option3);
 
         JButton b2=new JButton("Confirm");
         b2.setBounds(400,650,180, 50);
@@ -103,7 +105,6 @@ public class ClientGUI
 
         frame.getContentPane().add(option1);
         frame.getContentPane().add(option2);
-        frame.getContentPane().add(option3);
 
 
         //Welcome
@@ -116,13 +117,13 @@ public class ClientGUI
         b.setBounds(100,150,200, 70);
         b.setFont(new Font("Tacoma",Font.PLAIN, 18));
 
-        JButton b2=new JButton("Spanish Ballot");
-        b2.setBounds(400,150,200, 70);
-        b2.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        //JButton b2=new JButton("Spanish Ballot");
+        //b2.setBounds(400,150,200, 70);
+        //b2.setFont(new Font("Tacoma",Font.PLAIN, 18));
 
-        JButton b3=new JButton("French Ballot");
-        b3.setBounds(100,250,200, 70);
-        b3.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        //JButton b3=new JButton("French Ballot");
+        //b3.setBounds(100,250,200, 70);
+        //b3.setFont(new Font("Tacoma",Font.PLAIN, 18));
 
 
 
@@ -130,8 +131,8 @@ public class ClientGUI
         label1.setBounds(10, 210, 200, 100);
 
         frame.getContentPane().add(b);
-        frame.getContentPane().add(b2);
-        frame.getContentPane().add(b3);
+        //frame.getContentPane().add(b2);
+        //frame.getContentPane().add(b3);
         frame.getContentPane().add(label1);
         frame.getContentPane().add(instructions);
 
@@ -141,7 +142,7 @@ public class ClientGUI
             public void actionPerformed(ActionEvent arg0) {
                 //next screen
             }
-        }); */
+        });*/
 
 
 
