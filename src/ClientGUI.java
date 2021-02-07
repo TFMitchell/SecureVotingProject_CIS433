@@ -11,17 +11,20 @@
 
 import java.awt.*;
 import java.awt.event.*;
+import java.lang.reflect.Array;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import javax.swing.*;
 
 public class ClientGUI
 {
     public JFrame frame;
-    private ArrayList<String> candidates;
+
     public boolean ready;
     public boolean ended;
     public boolean counted;
-    public String accessible;
+    //public String accessible; //what should this be doing?
 
     public ClientGUI()
     {
@@ -30,15 +33,7 @@ public class ClientGUI
         ended = false; //set after the process comes to an end
         counted = false; //set after the Client receives the votes
 
-        accessible = "";
-
-        //temporary list of candidates
-        candidates = new ArrayList<String>();
-        candidates.add("Inn C. Umbent");
-        candidates.add("Chel Enger");
-
-
-
+        //accessible = "";
 
         //Create the frame.
         frame = new JFrame("Secure Voting App");
@@ -46,208 +41,233 @@ public class ClientGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        frame.setSize(715, 800);   //Size the frame.
 
         //select the first screen
         WelcomeScreen();
 
-        frame.setLayout(null);
-        frame.setSize(715, 800);
-
-        //Size the frame.
-
-
-
         //Show it.
         frame.setVisible(true);
     }
 
+    //I think we can just use the public method in Client instead
+    /**
     //use this to set the list of candidates from the main program
     public void setCandidates(ArrayList<String> newList) {
         candidates = newList;
 
-    }
+    }**/
 
     //Initial Screen. Used to select Language (only english currently)
     public void WelcomeScreen() {
+
         frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
 
         //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-
+        //Welcome screen instructions
         JLabel instructions = new JLabel("Welcome! Please Select Your Language", SwingConstants.LEFT);
         instructions.setBounds(130,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
+        frame.getContentPane().add(instructions);
 
-        JButton b=new JButton("English Ballot");
+        //single language option, English
+        JButton b = new JButton("English Ballot");
         b.setBounds(100,150,200, 70);
         b.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        frame.getContentPane().add(b);
 
         //JButton b2=new JButton("Spanish Ballot");
         //b2.setBounds(400,150,200, 70);
         //b2.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        //frame.getContentPane().add(b2);
 
         //JButton b3=new JButton("French Ballot");
         //b3.setBounds(100,250,200, 70);
         //b3.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        //frame.getContentPane().add(b3);
 
-
-
+        //what does this section do?
         JLabel label1 = new JLabel();
         label1.setBounds(10, 210, 200, 100);
-
-        frame.getContentPane().add(b);
-        //frame.getContentPane().add(b2);
-        //frame.getContentPane().add(b3);
         frame.getContentPane().add(label1);
-        frame.getContentPane().add(instructions);
 
+
+        //once English is clicked, go to VoteScreen (method below this one)
         b.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent arg0) {
-                VoteScreen("");
+
+                int nothingSelected[] = new int[Client.officesAndCandidates.size()]; //the voting screen should be default have nothing selected, but takes selection as an argument, so we need to make an empty selection
+
+                /**for (int i = 0; i < nothingSelected.length; i++) {
+                    nothingSelected[i] = 0;
+                }**/
+                VoteScreen(nothingSelected); //actual voting screen
             }
         });
 
 
-
-        frame.setLayout(null);
-        frame.setSize(715, 800);
-
-        //Size the frame.
-
+        //frame.setSize(715, 800); //Size the frame.
 
         //Show it.
         frame.setVisible(true);
-
     }
 
     //second Screen. Choose from the available candidates.
-    public void VoteScreen(String selected){
+    public void VoteScreen(int selected[]){
         //frame.removeAll();
+
         frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
 
         //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        //frame.removeAll();
-
+        //instructions
         JLabel instructions = new JLabel("Choose a candidate from each position", SwingConstants.LEFT);
         instructions.setBounds(150,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
+        frame.getContentPane().add(instructions);
 
-        //Currently, this is based on 1 job being votes on, and 2 candidates for the job
-        //repeat this section for each opening
-        JLabel section1 = new JLabel("1) Senator", SwingConstants.LEFT);
-        section1.setBounds(100,130,200, 70);
-        section1.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        JRadioButton options[][] = new JRadioButton[Client.officesAndCandidates.size()][10]; //array of an array of radio buttons for the candidates. First dimension is for the particular office
 
-        JRadioButton option1 = new JRadioButton(candidates.get(0));
-        JRadioButton option2 = new JRadioButton(candidates.get(1));
-        option1.setBounds(100, 180, 150, 40);
-        option1.setFont(new Font("Tacoma",Font.PLAIN, 16));
-        option2.setBounds(375, 180, 150, 40);
-        option2.setFont(new Font("Tacoma",Font.PLAIN, 16));
+        //lay out the voting options
+        int i = 0; //keep track of how many Offices we've listed so far
+        for (HashMap.Entry<String, ArrayList<String>> entry : Client.officesAndCandidates.entrySet()) //repeat this section for each office up for election
+        {
+            //display the name of the office e.g. "President"
+            JLabel office = new JLabel(entry.getKey(), SwingConstants.LEFT);
+            office.setBounds(100, 130 + 100 * i, 200, 70);
+            office.setFont(new Font("Tacoma", Font.PLAIN, 18));
+            frame.getContentPane().add(office);
 
-        ButtonGroup group = new ButtonGroup();
+            ButtonGroup group = new ButtonGroup(); //radio buttons for the candidates for each office
 
-        group.add(option1);
-        group.add(option2);
+            int n = 0; //keep track of how many candidates for this office we've listed
+            for (String candidate : entry.getValue()) //for each candidate in this office
+            {
+                //add their name to the radio options
+                options[i][n] = new JRadioButton(candidate);
+                options[i][n].setBounds(100 + 275 * n, 180 + 100 * i, 150, 40);
+                options[i][n].setFont(new Font("Tacoma", Font.PLAIN, 16));
+                group.add(options[i][n]);
+                frame.getContentPane().add(options[i][n]);
 
-        if(!selected.equals("")) {
+                //click the candidate they have already selected (if they want to make changes, their last attempt should be auto-filled)
+                if (selected[i] == n + 1) { //0 means no click, so + 1 for correct index
+                    options[i][n].doClick();
+                }
 
-
-            if(Integer.parseInt(selected)== 1){
-                option1.doClick();
-            }else if(Integer.parseInt(selected)== 2){
-                option2.doClick();
+                n++;
             }
+            i++;
         }
 
-        JButton b2=new JButton("Confirm");
-        b2.setBounds(400,650,180, 50);
-        b2.setFont(new Font("Tacoma",Font.BOLD, 18));
+        //confirmation button
+        JButton cb = new JButton("Confirm");
+        cb.setBounds(400, 650, 180, 50);
+        cb.setFont(new Font("Tacoma", Font.BOLD, 18));
+        frame.getContentPane().add(cb);
 
-        frame.getContentPane().add(b2);
-
-        frame.getContentPane().add(instructions);
-        frame.getContentPane().add(section1);
-
-        frame.getContentPane().add(option1);
-        frame.getContentPane().add(option2);
-
-        b2.addActionListener(new ActionListener() {
+        //confirmation button's action
+        cb.addActionListener(new ActionListener() {
 
             @Override
-            public void actionPerformed(ActionEvent arg0) {
-                String send = "";
-                if(option1.isSelected()){
-                    send = "1";
-                }else if(option2.isSelected()){
-                    send = "2";
+            public void actionPerformed(ActionEvent arg0) { //this function looks at what's been clicked
+
+                int selected[] = new int[Client.officesAndCandidates.size()]; //this is the value that will be passed on
+
+                for (int i = 0; i < selected.length; i++) //for each office
+                {
+                    for (int c = 0; c < options[i].length; c++) //for each candidate in each office
+                    {
+                        if (options[i][c] == null) //if there isn't a candidate at this index, continue
+                            continue;
+
+                        else if (options[i][c].isSelected()) //else if that radio button is selected, take note of it. Since 0 is no candidate selected, it's c + 1
+                            selected[i] = c + 1;
+                    }
                 }
-                ConfirmScreen(send);
+                ConfirmScreen(selected); //go to confirmation screen
             }
         });
 
-        frame.setLayout(null);
-        frame.setSize(715, 800);
+        //frame.repaint();
 
+
+        //frame.setSize(715, 800);
 
         frame.setVisible(true);
+
     }
-
-
-
 
 
 
     //Third Screen. Used to confirm the correct candidates, or can reselect
-    public void ConfirmScreen(String selected) {
+    public void ConfirmScreen(int selected[]) {
+
+        //frame.removeAll();
 
         frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
 
         //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+
+        //instructions for this page
         JLabel instructions = new JLabel("Please review the information before Submitting", SwingConstants.LEFT);
         instructions.setBounds(130,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
-
-        JLabel section1 = new JLabel("1) Senator", SwingConstants.LEFT);
-        section1.setBounds(150,130,200, 70);
-        section1.setFont(new Font("Tacoma",Font.PLAIN, 18));
-
-
-        JLabel candidate1 = new JLabel( "No Candidate Selected", SwingConstants.LEFT);
-        if(!selected.equals("")){
-
-            candidate1.setText(candidates.get(Integer.parseInt(selected) - 1));
-        }
-        candidate1.setBounds(350,130,200, 70);
-        candidate1.setFont(new Font("Tacoma",Font.PLAIN, 18));
-
-
-        JButton b=new JButton("Make Changes");
-        b.setBounds(100,650,180, 50);
-        b.setFont(new Font("Tacoma",Font.BOLD, 18));
-
-        JButton b2=new JButton("Confirm");
-        b2.setBounds(400,650,180, 50);
-        b2.setFont(new Font("Tacoma",Font.BOLD, 18));
-
         frame.getContentPane().add(instructions);
-        frame.getContentPane().add(section1);
-        frame.getContentPane().add(candidate1);
-        frame.getContentPane().add(b);
-        frame.getContentPane().add(b2);
 
-        frame.setLayout(null);
-        frame.setSize(715, 800);
+        //lay out the list of offices and their selections
+        int i = 0; //keep track of how many Offices we've listed so far
+        for (HashMap.Entry<String, ArrayList<String>> entry : Client.officesAndCandidates.entrySet())//repeat this section for each office up for election
+        {
+            //the name of each office
+            JLabel office = new JLabel(entry.getKey(), SwingConstants.LEFT);
+            office.setBounds(150, 130 + 70 * i, 200, 70);
+            office.setFont(new Font("Tacoma", Font.PLAIN, 18));
+            frame.getContentPane().add(office);
 
-        //Size the frame.
-        b.addActionListener(new ActionListener() {
+            //the candidate we selected for this office (or lack thereof)
+            JLabel candidate;
+            if (selected[i] == 0)
+                candidate = new JLabel("No Candidate Selected", SwingConstants.LEFT);
+
+            else
+                candidate = new JLabel(entry.getValue().get(selected[i] - 1), SwingConstants.LEFT);
+
+            candidate.setBounds(350, 130 + 70 * i, 200, 70);
+            candidate.setFont(new Font("Tacoma", Font.PLAIN, 18));
+            frame.getContentPane().add(candidate);
+
+            i++;
+
+        }
+
+        //laying out Make Changes and Confirm buttons now
+        JButton mkChgsB = new JButton("Make Changes");
+        mkChgsB.setBounds(100,650,180, 50);
+        mkChgsB.setFont(new Font("Tacoma",Font.BOLD, 18));
+        frame.getContentPane().add(mkChgsB);
+
+        JButton cfrmB = new JButton("Confirm");
+        cfrmB.setBounds(400,650,180, 50);
+        cfrmB.setFont(new Font("Tacoma",Font.BOLD, 18));
+        frame.getContentPane().add(cfrmB);
+
+
+        //frame.setSize(715, 800); //Size the frame.
+
+
+        //go back and re-vote with selections used last time pre-selected
+        mkChgsB.addActionListener(new ActionListener() {
 
             @Override
             public void actionPerformed(ActionEvent arg0) {
@@ -255,27 +275,30 @@ public class ClientGUI
             }
         });
 
-        b2.addActionListener(new ActionListener() {
+        //advance to waiting screen (below)
+        cfrmB.addActionListener(new ActionListener() {
 
             @Override
-
             public void actionPerformed(ActionEvent arg0) {
                 WaitScreen(selected);
             }
         });
 
-        //Show it.
+        //frame.repaint();
         frame.setVisible(true);
 
     }
 
 
-    public void WaitScreen(String selected){
+    public void WaitScreen(int selected[]){
         //Ready = true is the signal to the client to get the vote from 'accessible'
-        accessible = selected;
+        //accessible = selected;
         ready = true;
 
+        Client.CastVote(selected);
+
         frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
 
         JLabel instructions = new JLabel("Please Wait While your Vote is Confirmed", SwingConstants.CENTER);
         instructions.setBounds(100,80,500, 40);
@@ -283,33 +306,34 @@ public class ClientGUI
         frame.getContentPane().add(instructions);
 
         //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(null);
-        frame.setSize(715, 800);
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        //frame.setSize(715, 800);
 
         frame.setVisible(true);
 
+        //check when the vote is processed
         Timer delay = new Timer(3000, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Checkdone();
+                Checkdone(selected);
             }
         });
         delay.setRepeats(false);
         delay.start();
     }
 
-    public void Checkdone() {
+    //if vote has been counted, exit, else circle back to waiting screen
+    public void Checkdone(int selected[]) {
 
+        counted = true; //TODO
 
         if(counted == true){
             //the system sets counted == true after collecting and counting the vote
             ExitScreen();
         }else{
             //wait until client collects the vote
-            counted = true; //remove this later
-            WaitScreen(accessible);
+            WaitScreen(selected);
         }
     }
 
@@ -320,9 +344,10 @@ public class ClientGUI
         //in final version, should need the reset signal from the poll worker to restart
 
         frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
 
         //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 
         JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
@@ -341,11 +366,7 @@ public class ClientGUI
         frame.getContentPane().add(instructions3);
 
 
-
-        frame.setLayout(null);
-        frame.setSize(715, 800);
-
-        //Size the frame.
+        //frame.setSize(715, 800);
 
 
         //Show it.

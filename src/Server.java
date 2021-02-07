@@ -17,6 +17,7 @@ public class Server
 {
     private static BigInteger keyPair[][];
     private static ArrayList<String> CandidateNames = new ArrayList<>();
+    private static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
 
     public static void main(String args[]) throws Exception
     {
@@ -86,10 +87,30 @@ public class Server
                     serverSocket.close();
                     return;
                 }
+                else if (line.equals("sendingResults")) //listen for the results
+                {
+                    String office = is.readUTF();
+                    String votes;
+
+                    while(!office.equals("END"))
+                    {
+
+                        votes = is.readUTF();
+                        officesAndVotes.put(office, new BigInteger(votes));
+                        office = is.readUTF();
+
+                    }
+
+                    getResults();
+
+                    serverSocket.close();
+                    return;
+
+                }
 
             }
 
-        } catch(Exception e) {System.out.printf("Server couldn't start connection\n"); return;}
+        } catch(Exception e) {System.out.printf("Server couldn't start connection\n");}
 
 
     }
@@ -107,6 +128,30 @@ public class Server
         {
             CandidateNames.add(line);
             line = br.readLine();
+        }
+    }
+
+    private static void getResults()
+    {
+        System.out.printf("These are the results:\n");
+
+        for (String office : CandidateNames)
+        {
+            String names[] = office.split(", ");
+            officesAndVotes.get(names[0]); //the first after splitting is the office name
+
+            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), keyPair[1], keyPair[0][0]);
+
+            BigInteger remainder = decryptedOffice;
+
+            for (int i = names.length - 1; i > 0; i--)
+            {
+                BigInteger whole = remainder.divide(new BigInteger( Integer.toString( (int) Math.pow(Client.totalVoters + 1, i - 1)) ));
+                System.out.printf("%s got %d votes.\n", names[i], whole);
+                remainder = decryptedOffice.mod(new BigInteger( Integer.toString( (int) Math.pow(Client.totalVoters + 1, i - 1)) ));
+
+            }
+
         }
     }
 
