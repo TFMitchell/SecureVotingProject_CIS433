@@ -18,9 +18,27 @@ public class ClientGUI
 {
     public JFrame frame;
     private ArrayList<String> candidates;
+    public boolean ready;
+    public boolean ended;
+    public boolean counted;
+    public String accessible;
 
     public ClientGUI()
     {
+        //does not have a vote set yet
+        ready = false; //set after confirmation of votes
+        ended = false; //set after the process comes to an end
+        counted = false; //set after the Client receives the votes
+
+        accessible = "";
+
+        //temporary list of candidates
+        candidates = new ArrayList<String>();
+        candidates.add("Inn C. Umbent");
+        candidates.add("Chel Enger");
+
+
+
 
         //Create the frame.
         frame = new JFrame("Secure Voting App");
@@ -28,10 +46,8 @@ public class ClientGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        candidates = new ArrayList<String>();
-        candidates.add("Inn C. Umbent");
-        candidates.add("Chel Enger");
 
+        //select the first screen
         WelcomeScreen();
 
         frame.setLayout(null);
@@ -45,7 +61,16 @@ public class ClientGUI
         frame.setVisible(true);
     }
 
+    //use this to set the list of candidates from the main program
+    public void setCandidates(ArrayList<String> newList) {
+        candidates = newList;
+
+    }
+
     public void ExitScreen() {
+        ready = false;
+        ended = true;
+
         frame.setContentPane(new JPanel(new BorderLayout()));
 
         //Exit when closed.
@@ -79,6 +104,7 @@ public class ClientGUI
         frame.setVisible(true);
 
     }
+
 
 
     public void WelcomeScreen() {
@@ -191,14 +217,55 @@ public class ClientGUI
         b2.addActionListener(new ActionListener() {
 
             @Override
+
             public void actionPerformed(ActionEvent arg0) {
-                ExitScreen();
+                WaitScreen(selected);
             }
         });
 
         //Show it.
         frame.setVisible(true);
 
+    }
+
+    public void WaitScreen(String selected){
+
+        accessible = selected;
+        ready = true;
+
+        frame.setContentPane(new JPanel(new BorderLayout()));
+
+        JLabel instructions = new JLabel("Please Wait While your Vote is Confirmed", SwingConstants.CENTER);
+        instructions.setBounds(100,80,500, 40);
+        instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
+        frame.getContentPane().add(instructions);
+
+        //Exit when closed.
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(null);
+        frame.setSize(715, 800);
+
+
+        frame.setVisible(true);
+
+        Timer delay = new Timer(3000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Checkdone();
+            }
+        });
+        delay.setRepeats(false);
+        delay.start();
+    }
+
+    public void Checkdone() {
+
+        if(counted == true){
+            ExitScreen();
+        }else{
+            counted = true;
+            WaitScreen(accessible);
+        }
     }
 
 

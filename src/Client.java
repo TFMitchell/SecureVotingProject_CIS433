@@ -14,11 +14,19 @@ import java.net.*;
 import java.math.*;
 import java.util.*;
 
+import static java.lang.String.valueOf;
+
 public class Client
 {
+    public int count = 0;
+    public String name = "poll1";
+    //iterating the name for the vote is     name_count
+
 
     public static void main(String args[]) throws Exception
     {
+
+
         ClientGUI myGUI = new ClientGUI(); //set up the GUI
 
         ArrayList<String> candidates = getCandidates(); //get list of candidates from server (TA)
@@ -71,6 +79,35 @@ public class Client
             System.out.printf("%s got %d votes.\n", entry.getKey(), Crypto.decrypt(entry.getValue(), sk, pk[0]));
         }
     }
+
+    //current idea for function to call from the GUI
+    public void CastVote(String votes){
+        if(votes.equals("")){
+            //submitted ballot with no votes
+            return;
+        }
+        BigInteger r = new BigInteger("25");//new BigInteger(512, new Random()); //generate r
+
+        BigInteger[] pk = getPK();
+        HashMap<String, BigInteger> encryptedSubtotals;
+        try
+        {
+            encryptedSubtotals = readFile();
+        } catch(Exception e) {System.out.printf("Client couldn't read File.\n"); return;}
+
+        BigInteger vote1 = new BigInteger(votes);
+        BigInteger encryptedVote1 = Crypto.encrypt(vote1, r, pk);
+        count = count + 1;
+        String votename = name + "_" + valueOf(count);
+        encryptedSubtotals.put(votename, Crypto.addEncrypted(encryptedSubtotals.get(votename), encryptedVote1, pk[0])); //adding to subtotal
+        try
+        {
+            updateFile(encryptedSubtotals);
+        } catch(Exception e) {System.out.printf("Client couldn't write to file.\n"); return;}
+
+
+}
+
 
     //routine to get the public key from the server
     private static BigInteger[] getPK()

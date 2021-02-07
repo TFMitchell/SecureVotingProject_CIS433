@@ -15,19 +15,43 @@ import javax.swing.*;
 
 public class ServerGUI
 {
+    public JFrame frame;
 
     public ServerGUI()
     {
 
+
+
+
+
         //Create the frame.
-        JFrame frame = new JFrame("Secure Voting App");
+        frame = new JFrame("Secure Voting App");
 
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 
-        /*
-        //Vote Confirmation
+        //select the first screen
+        TotalScreen();
+
+        frame.setLayout(null);
+        frame.setSize(715, 800);
+
+        //Size the frame.
+
+
+
+        //Show it.
+        frame.setVisible(true);
+    }
+
+
+    public void ListScreen() {
+        frame.setContentPane(new JPanel(new BorderLayout()));
+
+        //Exit when closed.
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
         JLabel instructions = new JLabel("Encoded Vote Lookup", SwingConstants.CENTER);
         instructions.setBounds(100,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
@@ -57,13 +81,34 @@ public class ServerGUI
         JButton b=new JButton("Vote Totals");
         b.setBounds(200,650,280, 50);
         b.setFont(new Font("Tacoma",Font.BOLD, 18));
-        frame.getContentPane().add(b);*/
+
+        b.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                TotalScreen();
+            }
+        });
+
+        frame.getContentPane().add(b);
 
 
-        //Create components and put them in the frame.
+        frame.setLayout(null);
+        frame.setSize(715, 800);
+
+        //Size the frame.
 
 
-        // Website Results Screen
+        //Show it.
+        frame.setVisible(true);
+    }
+
+    public void TotalScreen() {
+        frame.setContentPane(new JPanel(new BorderLayout()));
+
+        //Exit when closed.
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
         JLabel instructions = new JLabel("Voting Results", SwingConstants.CENTER);
         instructions.setBounds(100,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
@@ -93,6 +138,13 @@ public class ServerGUI
         b.setBounds(200,650,280, 50);
         b.setFont(new Font("Tacoma",Font.BOLD, 18));
 
+        b.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                ListScreen();
+            }
+        });
 
         frame.getContentPane().add(instructions);
         frame.getContentPane().add(section1);
@@ -104,12 +156,14 @@ public class ServerGUI
 
         frame.getContentPane().add(b);
 
-        frame.setSize(600, 420);
         frame.setLayout(null);
+        frame.setSize(715, 800);
+
         //Size the frame.
 
 
         //Show it.
         frame.setVisible(true);
     }
+
 }
