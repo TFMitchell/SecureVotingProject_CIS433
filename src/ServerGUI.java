@@ -45,7 +45,8 @@ public class ServerGUI
         frame.setVisible(true);
     }
 
-
+    //lists all votes recieved with their 'name' and the encoded vote
+    //non-functional, static labels
     public void ListScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 
@@ -103,6 +104,8 @@ public class ServerGUI
         frame.setVisible(true);
     }
 
+    //lists the current totals
+    //non-functional, static numbers
     public void TotalScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 

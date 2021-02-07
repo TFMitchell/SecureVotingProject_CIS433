@@ -67,46 +67,7 @@ public class ClientGUI
 
     }
 
-    public void ExitScreen() {
-        ready = false;
-        ended = true;
-
-        frame.setContentPane(new JPanel(new BorderLayout()));
-
-        //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-
-        JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
-        instructions.setBounds(100,80,500, 40);
-        instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
-
-        JLabel instructions2 = new JLabel("Receipt is printing...", SwingConstants.CENTER);
-        instructions2.setBounds(100,150,500, 40);
-        instructions2.setFont(new Font("Tacoma",Font.PLAIN, 20));
-
-        JLabel instructions3 = new JLabel("Please Leave the voting area", SwingConstants.CENTER);
-        instructions3.setBounds(100,270,500, 40);
-        instructions3.setFont(new Font("Tacoma",Font.PLAIN, 20));
-        frame.getContentPane().add(instructions);
-        frame.getContentPane().add(instructions2);
-        frame.getContentPane().add(instructions3);
-
-
-
-        frame.setLayout(null);
-        frame.setSize(715, 800);
-
-        //Size the frame.
-
-
-        //Show it.
-        frame.setVisible(true);
-
-    }
-
-
-
+    //Initial Screen. Used to select Language (only english currently)
     public void WelcomeScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 
@@ -162,7 +123,87 @@ public class ClientGUI
 
     }
 
+    //second Screen. Choose from the available candidates.
+    public void VoteScreen(String selected){
+        //frame.removeAll();
+        frame.setContentPane(new JPanel(new BorderLayout()));
 
+        //Exit when closed.
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        //frame.removeAll();
+
+        JLabel instructions = new JLabel("Choose a candidate from each position", SwingConstants.LEFT);
+        instructions.setBounds(150,80,500, 40);
+        instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
+
+        //Currently, this is based on 1 job being votes on, and 2 candidates for the job
+        //repeat this section for each opening
+        JLabel section1 = new JLabel("1) Senator", SwingConstants.LEFT);
+        section1.setBounds(100,130,200, 70);
+        section1.setFont(new Font("Tacoma",Font.PLAIN, 18));
+
+        JRadioButton option1 = new JRadioButton(candidates.get(0));
+        JRadioButton option2 = new JRadioButton(candidates.get(1));
+        option1.setBounds(100, 180, 150, 40);
+        option1.setFont(new Font("Tacoma",Font.PLAIN, 16));
+        option2.setBounds(375, 180, 150, 40);
+        option2.setFont(new Font("Tacoma",Font.PLAIN, 16));
+
+        ButtonGroup group = new ButtonGroup();
+
+        group.add(option1);
+        group.add(option2);
+
+        if(!selected.equals("")) {
+
+
+            if(Integer.parseInt(selected)== 1){
+                option1.doClick();
+            }else if(Integer.parseInt(selected)== 2){
+                option2.doClick();
+            }
+        }
+
+        JButton b2=new JButton("Confirm");
+        b2.setBounds(400,650,180, 50);
+        b2.setFont(new Font("Tacoma",Font.BOLD, 18));
+
+        frame.getContentPane().add(b2);
+
+        frame.getContentPane().add(instructions);
+        frame.getContentPane().add(section1);
+
+        frame.getContentPane().add(option1);
+        frame.getContentPane().add(option2);
+
+        b2.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                String send = "";
+                if(option1.isSelected()){
+                    send = "1";
+                }else if(option2.isSelected()){
+                    send = "2";
+                }
+                ConfirmScreen(send);
+            }
+        });
+
+        frame.setLayout(null);
+        frame.setSize(715, 800);
+
+
+        frame.setVisible(true);
+    }
+
+
+
+
+
+
+    //Third Screen. Used to confirm the correct candidates, or can reselect
     public void ConfirmScreen(String selected) {
 
         frame.setContentPane(new JPanel(new BorderLayout()));
@@ -228,8 +269,9 @@ public class ClientGUI
 
     }
 
-    public void WaitScreen(String selected){
 
+    public void WaitScreen(String selected){
+        //Ready = true is the signal to the client to get the vote from 'accessible'
         accessible = selected;
         ready = true;
 
@@ -260,85 +302,55 @@ public class ClientGUI
 
     public void Checkdone() {
 
+
         if(counted == true){
+            //the system sets counted == true after collecting and counting the vote
             ExitScreen();
         }else{
-            counted = true;
+            //wait until client collects the vote
+            counted = true; //remove this later
             WaitScreen(accessible);
         }
     }
 
+    //final screen, display final messages
+    public void ExitScreen() {
+        ready = false;
+        ended = true;
+        //in final version, should need the reset signal from the poll worker to restart
 
-    public void VoteScreen(String selected){
-        //frame.removeAll();
         frame.setContentPane(new JPanel(new BorderLayout()));
 
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        //frame.removeAll();
 
-        JLabel instructions = new JLabel("Choose a candidate from each position", SwingConstants.LEFT);
-        instructions.setBounds(150,80,500, 40);
+        JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
+        instructions.setBounds(100,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
 
-        //repeat this section for each opening
-        JLabel section1 = new JLabel("1) Senator", SwingConstants.LEFT);
-        section1.setBounds(100,130,200, 70);
-        section1.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        JLabel instructions2 = new JLabel("Receipt is printing...", SwingConstants.CENTER);
+        instructions2.setBounds(100,150,500, 40);
+        instructions2.setFont(new Font("Tacoma",Font.PLAIN, 20));
 
-        JRadioButton option1 = new JRadioButton(candidates.get(0));
-        JRadioButton option2 = new JRadioButton(candidates.get(1));
-        option1.setBounds(100, 180, 150, 40);
-        option1.setFont(new Font("Tacoma",Font.PLAIN, 16));
-        option2.setBounds(375, 180, 150, 40);
-        option2.setFont(new Font("Tacoma",Font.PLAIN, 16));
-
-        ButtonGroup group = new ButtonGroup();
-
-        group.add(option1);
-        group.add(option2);
-
-        if(!selected.equals("")) {
-
-
-            if(Integer.parseInt(selected)== 1){
-                option1.doClick();
-            }else if(Integer.parseInt(selected)== 2){
-                option2.doClick();
-            }
-        }
-
-        JButton b2=new JButton("Confirm");
-        b2.setBounds(400,650,180, 50);
-        b2.setFont(new Font("Tacoma",Font.BOLD, 18));
-
-        frame.getContentPane().add(b2);
-
+        JLabel instructions3 = new JLabel("Please Leave the voting area", SwingConstants.CENTER);
+        instructions3.setBounds(100,270,500, 40);
+        instructions3.setFont(new Font("Tacoma",Font.PLAIN, 20));
         frame.getContentPane().add(instructions);
-        frame.getContentPane().add(section1);
+        frame.getContentPane().add(instructions2);
+        frame.getContentPane().add(instructions3);
 
-        frame.getContentPane().add(option1);
-        frame.getContentPane().add(option2);
 
-        b2.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                String send = "";
-                if(option1.isSelected()){
-                    send = "1";
-                }else if(option2.isSelected()){
-                    send = "2";
-                }
-                ConfirmScreen(send);
-            }
-        });
 
         frame.setLayout(null);
         frame.setSize(715, 800);
 
+        //Size the frame.
 
+
+        //Show it.
         frame.setVisible(true);
+
     }
+
 }
