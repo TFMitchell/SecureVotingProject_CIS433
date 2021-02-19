@@ -51,6 +51,12 @@ public class Client
             System.out.printf("From file: %s: %d\n", entry.getKey(), entry.getValue());
         }**/
 
+        /**
+         suggestion for multiple candidate naming scheme:
+         role_(position)_candidate1_candidate2_candidate3_
+         *
+         */
+
         //TODO handle possible conflict between names provided by server and names in saved file
 
         //not random at the moment
@@ -96,6 +102,8 @@ public class Client
 
 
     }
+
+
 
     //current idea for function to call from the GUI
     public static void CastVote(int selected[]){

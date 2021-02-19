@@ -46,6 +46,7 @@ public class ClientGUI
         //select the first screen
         WelcomeScreen();
 
+
         //Show it.
         frame.setVisible(true);
     }
@@ -280,6 +281,7 @@ public class ClientGUI
 
             @Override
             public void actionPerformed(ActionEvent arg0) {
+                Client.CastVote(selected);
                 WaitScreen(selected);
             }
         });
@@ -295,7 +297,9 @@ public class ClientGUI
         //accessible = selected;
         ready = true;
 
-        Client.CastVote(selected);
+        //I moved this because the idea with the wait screen was that it would repeatedly come up until the vote is counted
+        //If the vote is cast here it could be counted multiple times.
+        //Client.CastVote(selected);
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
@@ -326,7 +330,7 @@ public class ClientGUI
     //if vote has been counted, exit, else circle back to waiting screen
     public void Checkdone(int selected[]) {
 
-        counted = true; //TODO
+        counted = true; //TODO: should be set by the Client
 
         if(counted == true){
             //the system sets counted == true after collecting and counting the vote
@@ -365,6 +369,8 @@ public class ClientGUI
         frame.getContentPane().add(instructions2);
         frame.getContentPane().add(instructions3);
 
+        // are we showing the "receipt", the encryptedVote
+        //I'm basing this on the numberfile video, with the idea the server lists all the receipts
 
         //frame.setSize(715, 800);
 
