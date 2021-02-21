@@ -14,6 +14,7 @@ import java.lang.reflect.Array;
 import java.net.*;
 import java.math.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import static java.lang.String.valueOf;
 
@@ -24,15 +25,30 @@ public class Client
     //iterating the name for the vote is     name_count
 
     private static HashMap<String, BigInteger> encryptedSubtotals; //keeps track of subtotals by office
-    private static BigInteger[] pk;
+    private static BigInteger[] pq = new BigInteger[2];
+    private static BigInteger[] pk = new BigInteger[2];
+    private static BigInteger[] sk = new BigInteger[2];
     public static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
+    private static int bitLength, certainty; //will be updated by main
+    private  static Random rand = new Random();
+    private static int portNum;
+    public static Socket socket;
+    public static ObjectOutputStream os;
+    public static ObjectInputStream is;
 
 
-    public static void main(String args[]) throws Exception
+    public static void main(String args[]) throws Exception //args[0] is port
     {
+        portNum = Integer.parseInt(args[0]);
 
         ClientGUI myGUI = new ClientGUI(); //set up the GUI
+
+        socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+        os = new ObjectOutputStream(socket.getOutputStream());
+        is = new ObjectInputStream(socket.getInputStream());
+
+
 
         /**ArrayList<String> candidates = getCandidates(); //get list of candidates from server (TA)
 
@@ -63,10 +79,17 @@ public class Client
         //BigInteger r = new BigInteger("25");//new BigInteger(512, new Random()); //generate r
 
 
-        pk = getPK(); //get the public key from the server (TA)
-        Thread.sleep(300); //give server some time to recover from getting pk. We'll need to have a fix for multiple clients.
+        //give server some time to recover from getting pk. We'll need to have a fix for multiple clients.
         officesAndCandidates = getCandidates();
         encryptedSubtotals = readFile();
+
+        while (!isServerReadytoSupplyPK()) //if key's not ready, start guessing PQs qith PQgen()
+        {
+            PQgen();
+        }
+
+        getPK();
+
 
         //simulate votes and put them in the file
         /**
@@ -103,21 +126,41 @@ public class Client
 
     }
 
+    private static void PQgen() throws Exception //starts at 1 and includes itself
+    {
+        BigInteger pq[] = new BigInteger[2];
+
+        //moving this to server, I forgot
+        /**
+
+        while (true)
+        {
+            pq[0] = new BigInteger(bitLength / 2 / numClients, certainty, rand);
+            pq[1] = new BigInteger(bitLength / 2 / numClients, certainty, rand);
+
+
+
+            //give server command
+            os.writeUTF("sendingPQ");
+            os.writeUTF(Integer.toString(myNum));
+            os.writeUTF(pq[0].toString());
+            os.writeUTF(pq[1].toString());
+
+            os.flush();
+
+
+        }
+         **/
+
+    }
 
 
     //current idea for function to call from the GUI
-    public static void CastVote(int selected[]){
+    public static void CastVote(int selected[]) throws Exception
+    {
 
-        BigInteger r = new BigInteger("25");//new BigInteger(512, new Random()); //generate r
+        BigInteger r = new BigInteger(bitLength, rand); //generate r
 
-
-        //we don't need this since we already read in main
-        /**
-        try
-        {
-            encryptedSubtotals = readFile();
-        } catch(Exception e) {System.out.printf("Client couldn't read File.\n"); return;}
-         **/
 
         int i = 0; //keep track of which office
         for (HashMap.Entry<String, ArrayList<String>> entry : officesAndCandidates.entrySet()) {
@@ -140,7 +183,7 @@ public class Client
             else
                 officeSubTotal = encryptedSubtotals.get(entry.getKey());
 
-            officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, pk[0]); //add the new vote to it
+            officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, pk); //add the new vote to it
 
             encryptedSubtotals.put(entry.getKey(), officeSubTotal); //update the hashmap
             count++; //increment the times this machina has been used
@@ -161,86 +204,60 @@ public class Client
 
 
     //routine to get the public key from the server
-    private static BigInteger[] getPK()
+    private static void getPK() throws Exception
     {
-        BigInteger pk[] =  new BigInteger[2]; //return value
 
-        try
-        {
-            //getting connected
-            Socket socket = new Socket(InetAddress.getLocalHost().getHostAddress(), 1337);
-            ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
 
-            //give server command
-            os.writeUTF("getPK");
-            os.flush();
+        //give server command
+        os.writeUTF("getPK");
+        os.flush();
 
-            //get information back from server
-            pk[0] = new BigInteger(is.readUTF());
-            pk[1] = new BigInteger(is.readUTF());
+        //get information back from server
+        pk[0] = new BigInteger(is.readUTF());
+        pk[1] = new BigInteger(is.readUTF());
 
-        } catch(Exception e) {System.out.printf("Client couldn't start connection (PK function).\n"); return null;}
 
-        return pk;
+
     }
 
+
     //routine to get the secret key from the server. This won't be in the final copy of the program.
-    private static BigInteger[] getSK()
+    private static void getSK() throws Exception
     {
-        BigInteger sk[] =  new BigInteger[2]; //return value
 
-        try
-        {
-            //getting connected
-            Socket socket = new Socket(InetAddress.getLocalHost().getHostAddress(), 1337);
-            ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
 
-            //ask server for secret key
-            os.writeUTF("getSK");
-            os.flush();
+        //ask server for secret key
+        os.writeUTF("getSK");
+        os.flush();
 
-            //get secret key
-            sk[0] = new BigInteger(is.readUTF());
-            sk[1] = new BigInteger(is.readUTF());
+        //get secret key
+        sk[0] = new BigInteger(is.readUTF());
+        sk[1] = new BigInteger(is.readUTF());
 
-        } catch(Exception e) {System.out.printf("Client couldn't start connection (SK function).\n"); return null;}
 
-        return sk;
     }
 
     //routine to get the candidate list from server
-    public static HashMap<String, ArrayList<String>> getCandidates()
+    public static HashMap<String, ArrayList<String>> getCandidates() throws Exception
     {
         HashMap<String, ArrayList<String>> officesAndCandidates = new HashMap<>();
 
-        try
+        //ask for candidates
+        os.writeUTF("getCandidates");
+        os.flush();
+
+        //read the first line of candidate file on server (each line represents one office)
+        String line = is.readUTF();
+
+        //continue reading from server until it sends special "END" message to signify end of list
+        while (!line.equals("END"))
         {
-            //getting connected
-            Socket socket = new Socket(InetAddress.getLocalHost().getHostAddress(), 1337);
-            ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
-
-            //ask for candidates
-            os.writeUTF("getCandidates");
-            os.flush();
-
-            //read the first line of candidate file on server (each line represents one office)
-            String line = is.readUTF();
-
-            //continue reading from server until it sends special "END" message to signify end of list
-            while (!line.equals("END"))
-            {
-                String splitLine[] = line.split(", "); //each line uses the following form: office, name1, name2  So we split on commas
-                ArrayList<String> candidateList = new ArrayList<>(); //making an arraylist of candidates per office to eventually add to the hashmap entry
-                Collections.addAll(candidateList, Arrays.copyOfRange(splitLine, 1, splitLine.length)); //the candidateList should be the splitLine values except the first entry, which is for the office name
-                officesAndCandidates.put(splitLine[0],candidateList); //add the entry to the return value
-                line = is.readUTF(); //continue reading from file
-            }
-
-        } catch(Exception e) {System.out.printf("Client couldn't start connection (getCandidates function).\n"); return null;}
-
+            String splitLine[] = line.split(", "); //each line uses the following form: office, name1, name2  So we split on commas
+            ArrayList<String> candidateList = new ArrayList<>(); //making an arraylist of candidates per office to eventually add to the hashmap entry
+            Collections.addAll(candidateList, Arrays.copyOfRange(splitLine, 1, splitLine.length)); //the candidateList should be the splitLine values except the first entry, which is for the office name
+            officesAndCandidates.put(splitLine[0],candidateList); //add the entry to the return value
+            line = is.readUTF(); //continue reading from file
+        }
 
 
         return officesAndCandidates;
@@ -282,33 +299,44 @@ public class Client
         return encryptedSubtotals;
     }
 
-    private static void getFinalTally()
+    private static boolean isServerReadytoSupplyPK() throws Exception
+    {
+        boolean rv = false;
+
+
+
+        //ask server if it needs a key to be generated
+        os.writeUTF("needKey?");
+        os.flush();
+
+        rv = !is.readUTF().equals("yes");
+
+        bitLength = Integer.parseInt(is.readUTF());
+        certainty = Integer.parseInt(is.readUTF());
+
+
+
+        return rv;
+    }
+
+    private static void getFinalTally() throws Exception
     {
 
-        try
+
+        //ask server to print results
+        os.writeUTF("sendingResults");
+        os.flush();
+
+        for (HashMap.Entry<String, BigInteger> entry : encryptedSubtotals.entrySet())
         {
-            //getting connected
-            Socket socket = new Socket(InetAddress.getLocalHost().getHostAddress(), 1337);
-            ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
-
-            //ask server to print results
-            os.writeUTF("sendingResults");
+            os.writeUTF(entry.getKey());
             os.flush();
-
-            for (HashMap.Entry<String, BigInteger> entry : encryptedSubtotals.entrySet())
-            {
-                os.writeUTF(entry.getKey());
-                os.flush();
-                os.writeUTF(entry.getValue().toString());
-                os.flush();
-            }
-            os.writeUTF("END");
-
+            os.writeUTF(entry.getValue().toString());
             os.flush();
+        }
+        os.writeUTF("END");
 
-
-        } catch(Exception e) {System.out.printf("Client couldn't start connection (final tally function).\n");}
+        os.flush();
 
     }
 

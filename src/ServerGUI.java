@@ -21,9 +21,6 @@ public class ServerGUI
     {
 
 
-
-
-
         //Create the frame.
         frame = new JFrame("Secure Voting App");
 

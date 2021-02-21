@@ -178,7 +178,8 @@ public class ClientGUI
         cb.addActionListener(new ActionListener() {
 
             @Override
-            public void actionPerformed(ActionEvent arg0) { //this function looks at what's been clicked
+            public void actionPerformed(ActionEvent arg0)
+            { //this function looks at what's been clicked
 
                 int selected[] = new int[Client.officesAndCandidates.size()]; //this is the value that will be passed on
 
@@ -193,7 +194,9 @@ public class ClientGUI
                             selected[i] = c + 1;
                     }
                 }
-                ConfirmScreen(selected); //go to confirmation screen
+                try
+                {ConfirmScreen(selected);} //go to confirmation screen
+                catch(Exception e) {System.out.printf("Server couldn't start connection\n");}
             }
         });
 
@@ -209,7 +212,8 @@ public class ClientGUI
 
 
     //Third Screen. Used to confirm the correct candidates, or can reselect
-    public void ConfirmScreen(int selected[]) {
+    public void ConfirmScreen(int selected[]) throws Exception
+    {
 
         //frame.removeAll();
 
@@ -281,7 +285,8 @@ public class ClientGUI
 
             @Override
             public void actionPerformed(ActionEvent arg0) {
-                Client.CastVote(selected);
+                try {Client.CastVote(selected);}
+                catch(Exception e) {System.out.printf("Server couldn't start connection\n");}
                 WaitScreen(selected);
             }
         });

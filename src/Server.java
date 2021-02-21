@@ -12,111 +12,53 @@ import java.io.*;
 import java.net.*;
 import java.math.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class Server
 {
-    private static BigInteger keyPair[][];
-    private static ArrayList<String> CandidateNames = new ArrayList<>();
-    private static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
+    public static BigInteger pk[], sk[];
+    public static BigInteger clientPQs[][];
+    public static ArrayList<String> CandidateNames = new ArrayList<>();
+    public static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
+    public static boolean needPQsFromClients = false;
+    public static int bitLength = 1024;
+    public static int certainty = 64;
+    public static ArrayList<Integer> portNums = new ArrayList<>();
+    public static boolean running = true;
 
-    public static void main(String args[]) throws Exception
+    public static void main(String args[]) throws Exception //list the clients' ports sequentially
     {
         ServerGUI myGUI = new ServerGUI(); //set up the GUI
 
-        //setting up arbitrary bitlength and certainty (for Paillier_cryptosystem)
-        int bitLength = 512;
-        int certainty = 68;
+        for (String portNum : args)
+        {
+            portNums.add(new Integer(portNum));
+        }
 
-        keyPair = Crypto.keyPairGen(bitLength, certainty); //keyPair[0] is the public key and keyPair[1] is the secret key
+        clientPQs = new BigInteger[Integer.parseInt(args[1])][2];
+
+        for (BigInteger[] clientPQ : clientPQs)
+        {
+            clientPQ[0] = BigInteger.ZERO;
+            clientPQ[1] = BigInteger.ZERO;
+        }
+
 
         readCandidatesFromFile(); //read the candidate file and load it into the array
+        retreiveKeysFromFile();
 
-        //keep serving until the window is closed
-        while(true)
+        ExecutorService executor = Executors.newCachedThreadPool();
+
+        for (int i = 0; i < portNums.size(); i++)
         {
-            Serve();
+            executor.execute(new ServerComm());
         }
-    }
-
-    //basic socket that tried to connect with a client on port 1337 of the localhost
-    private static void Serve()
-    {
-        try
-        {
-            //getting ready to receive input
-            ServerSocket serverSocket = new ServerSocket(1337);
-            String line;
-            Socket clientSocket = serverSocket.accept();
-            ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
-            ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
-
-            while(true)
-            {
-                line = is.readUTF();
-
-                if (line.equals("getPK"))  //send public key
-                {
-                    os.writeUTF(keyPair[0][0].toString());
-                    os.writeUTF(keyPair[0][1].toString());
-
-                    os.flush();
-                    serverSocket.close();
-                    return;
-                }
-
-                else if (line.equals("getSK"))  //send secret key
-                {
-                    os.writeUTF(keyPair[1][0].toString());
-                    os.writeUTF(keyPair[1][1].toString());
-
-                    os.flush();
-                    serverSocket.close();
-                    return;
-                }
-
-                else if (line.equals("getCandidates"))  //send candidates
-                {
-                    for (String name : CandidateNames)
-                    {
-                        os.writeUTF(name);
-                    }
-
-                    os.writeUTF("END"); //tells client that the list is done
-
-                    os.flush();
-                    serverSocket.close();
-                    return;
-                }
-                else if (line.equals("sendingResults")) //listen for the results
-                {
-                    String office = is.readUTF();
-                    String votes;
-
-                    while(!office.equals("END"))
-                    {
-
-                        votes = is.readUTF();
-                        officesAndVotes.put(office, new BigInteger(votes));
-                        office = is.readUTF();
-
-                    }
-
-                    getResults();
-
-                    serverSocket.close();
-                    return;
-
-                }
-
-            }
-
-        } catch(Exception e) {System.out.printf("Server couldn't start connection\n");}
-
 
     }
+
 
     //file handler for candidate list
-    private static void readCandidatesFromFile() throws Exception
+    public static void readCandidatesFromFile() throws Exception
     {
         File file = new File("candidate_list.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
@@ -131,7 +73,26 @@ public class Server
         }
     }
 
-    private static void getResults()
+    public static void pkGen()
+    {
+        BigInteger pqSums[] = new BigInteger[2];
+
+        for(BigInteger[] clientPQ : clientPQs)
+        {
+            pqSums[0] = pqSums[0].add(clientPQ[0]);
+            pqSums[1] = pqSums[1].add(clientPQ[1]);
+        }
+
+        pk = Crypto.getPK(pqSums);
+
+        if (pk[0].signum() != 0)
+        {
+            needPQsFromClients = false;
+        }
+
+    }
+
+    public static void getResults()
     {
         System.out.printf("These are the results:\n");
 
@@ -140,7 +101,7 @@ public class Server
             String names[] = office.split(", ");
             officesAndVotes.get(names[0]); //the first after splitting is the office name
 
-            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), keyPair[1], keyPair[0][0]);
+            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), pk, sk);
 
             BigInteger remainder = decryptedOffice;
 
@@ -155,4 +116,117 @@ public class Server
         }
     }
 
+    public static void retreiveKeysFromFile() throws Exception
+    {
+        File file = new File("serverKeys.txt");
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        String line;
+
+        line = br.readLine();
+
+        if (line == null)
+        {
+            needPQsFromClients = true;
+            return;
+        }
+        //else
+        pk[0] = new BigInteger(line);
+        line = br.readLine();
+        pk[1] = new BigInteger(line);
+
+        sk[0] = new BigInteger(line);
+        line = br.readLine();
+        sk[1] = new BigInteger(line);
+    }
+
+}
+
+class ServerComm implements Runnable
+{
+    public void run()
+    {
+        try
+        {
+            //getting ready to receive input
+            ServerSocket serverSocket = new ServerSocket(Server.portNums.remove(0));
+            String line;
+            Socket clientSocket = serverSocket.accept();
+            ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
+            ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
+
+
+            while (Server.running)
+            {
+
+                line = is.readUTF();
+
+                if (line.equals("getPK"))  //send public key
+                {
+                    os.writeUTF(Server.pk[0].toString());
+                    os.writeUTF(Server.pk[1].toString());
+
+
+                    os.flush();
+
+                } else if (line.equals("getSK"))  //send secret key
+                {
+                    os.writeUTF(Server.pk[0].toString());
+                    os.writeUTF(Server.pk[1].toString());
+
+                    os.flush();
+
+                } else if (line.equals("getCandidates"))  //send candidates
+                {
+
+                    for (String name : Server.CandidateNames) {
+                        os.writeUTF(name);
+                    }
+
+                    os.writeUTF("END"); //tells client that the list is done
+
+                    os.flush();
+
+                } else if (line.equals("sendingResults")) //listen for the results
+                {
+                    String office = is.readUTF();
+                    String votes;
+
+                    while (!office.equals("END")) {
+
+                        votes = is.readUTF();
+                        Server.officesAndVotes.put(office, new BigInteger(votes));
+                        office = is.readUTF();
+
+                    }
+
+                    Server.getResults();
+
+
+                } else if (line.equals("needKey?")) {
+                    if (Server.needPQsFromClients)
+                        os.writeUTF("yes");
+                    else
+                        os.writeUTF("no");
+
+                    //regardless, we write back parameters
+                    os.writeUTF(Integer.toString(Server.bitLength));
+                    os.writeUTF(Integer.toString(Server.certainty));
+
+                    os.flush();
+                } else if (line.equals("sendingPQ")) {
+                    int clientNum = Integer.parseInt(is.readUTF());
+                    Server.clientPQs[clientNum][0] = new BigInteger(is.readUTF());
+                    Server.clientPQs[clientNum][1] = new BigInteger(is.readUTF());
+
+                    //try to calculate pk
+                    Server.pkGen();
+
+                } else
+                    System.out.printf("Unexpected message arrived at server: %s\n", line);
+            }
+
+        } catch(Exception e) {System.out.printf("Server couldn't start connection. %s\n", e);}
+
+
+    }
 }
