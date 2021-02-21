@@ -24,14 +24,13 @@ public class Client
     public String name = "poll1";
     //iterating the name for the vote is     name_count
 
-    private static HashMap<String, BigInteger> encryptedSubtotals; //keeps track of subtotals by office
+
     private static BigInteger[] pq = new BigInteger[2];
     private static BigInteger[] pk = new BigInteger[2];
     private static BigInteger[] sk = new BigInteger[2];
     public static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
     private static int bitLength, certainty; //will be updated by main
-    private  static Random rand = new Random();
     private static int portNum;
     public static Socket socket;
     public static ObjectOutputStream os;
@@ -81,11 +80,10 @@ public class Client
 
         //give server some time to recover from getting pk. We'll need to have a fix for multiple clients.
         officesAndCandidates = getCandidates();
-        encryptedSubtotals = readFile();
 
-        while (!isServerReadytoSupplyPK()) //if key's not ready, start guessing PQs qith PQgen()
+        while(!isServerReadyToSupplyPK())
         {
-            PQgen();
+            Thread.sleep(500);
         }
 
         getPK();
@@ -126,87 +124,40 @@ public class Client
 
     }
 
-    private static void PQgen() throws Exception //starts at 1 and includes itself
-    {
-        BigInteger pq[] = new BigInteger[2];
-
-        //moving this to server, I forgot
-        /**
-
-        while (true)
-        {
-            pq[0] = new BigInteger(bitLength / 2 / numClients, certainty, rand);
-            pq[1] = new BigInteger(bitLength / 2 / numClients, certainty, rand);
-
-
-
-            //give server command
-            os.writeUTF("sendingPQ");
-            os.writeUTF(Integer.toString(myNum));
-            os.writeUTF(pq[0].toString());
-            os.writeUTF(pq[1].toString());
-
-            os.flush();
-
-
-        }
-         **/
-
-    }
-
-
     //current idea for function to call from the GUI
-    public static void CastVote(int selected[]) throws Exception
-    {
+    public static void CastVote(int selected[]) throws Exception {
 
-        BigInteger r = new BigInteger(bitLength, rand); //generate r
+        BigInteger r;
+        do {
+            r = new BigInteger(bitLength - 1, new Random()); //generate r
+        } while (r.gcd(pk[0]).signum() != 1);
 
 
         int i = 0; //keep track of which office
         for (HashMap.Entry<String, ArrayList<String>> entry : officesAndCandidates.entrySet()) {
-
             BigInteger biVote;
             if (selected[i] == 0)
                 biVote = new BigInteger("0");
             else if (selected[i] == 1)
                 biVote = new BigInteger("1");
             else
-                biVote = new BigInteger( Integer.toString( (int) Math.pow(totalVoters + 1, selected[i] - 1) )); //convert the vote to how it should be encrypted for homomorphic encryption to work
+                biVote = new BigInteger(Integer.toString((int) Math.pow(totalVoters + 1, selected[i] - 1))); //convert the vote to how it should be encrypted for homomorphic encryption to work
             BigInteger encryptedVote = Crypto.encrypt(biVote, r, pk); //encrypt it
 
+            os.writeUTF("sendingBallot");
+            os.writeUTF(encryptedVote.toString());
+            os.writeUTF(entry.getKey());
+            os.flush();
 
-
-            //get the subtotal for this particular office
-            BigInteger officeSubTotal;
-            if (encryptedSubtotals.get(entry.getKey()) == null)
-                officeSubTotal = new BigInteger("0");
-            else
-                officeSubTotal = encryptedSubtotals.get(entry.getKey());
-
-            officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, pk); //add the new vote to it
-
-            encryptedSubtotals.put(entry.getKey(), officeSubTotal); //update the hashmap
-            count++; //increment the times this machina has been used
+            count++; //increment the times this machine has been used
 
             i++;
         }
-        //temporarily asking Server to print the results we send it.
-        getFinalTally();
-
-
-        //now try to update the file on disk
-        try
-        {
-            updateFile(encryptedSubtotals);
-        } catch(Exception e) {System.out.printf("Client couldn't write to file.\n"); return;}
-
-}
-
+    }
 
     //routine to get the public key from the server
     private static void getPK() throws Exception
     {
-
 
         //give server command
         os.writeUTF("getPK");
@@ -216,15 +167,12 @@ public class Client
         pk[0] = new BigInteger(is.readUTF());
         pk[1] = new BigInteger(is.readUTF());
 
-
-
     }
 
 
     //routine to get the secret key from the server. This won't be in the final copy of the program.
     private static void getSK() throws Exception
     {
-
 
         //ask server for secret key
         os.writeUTF("getSK");
@@ -233,7 +181,6 @@ public class Client
         //get secret key
         sk[0] = new BigInteger(is.readUTF());
         sk[1] = new BigInteger(is.readUTF());
-
 
     }
 
@@ -259,85 +206,26 @@ public class Client
             line = is.readUTF(); //continue reading from file
         }
 
-
         return officesAndCandidates;
     }
 
-    //writes to the subtotal file after voting is done
-    private static void updateFile(HashMap<String, BigInteger> records) throws Exception
+
+    private static boolean isServerReadyToSupplyPK() throws Exception
     {
-        FileWriter file = new FileWriter("encryptedSubtotals.txt");
-
-        //for every office
-        for (HashMap.Entry<String, BigInteger> entry : records.entrySet())
-        {
-            file.write(entry.getKey() + ": " + entry.getValue() + "\n");
-        }
-
-        file.close();
-    }
-
-    //reads existing subtotals from the appropriately-named file in the working directory
-    private static HashMap<String, BigInteger> readFile() throws Exception
-    {
-        HashMap<String, BigInteger> encryptedSubtotals = new HashMap<>(); //return value
-
-        File file = new File("encryptedSubtotals.txt");
-        BufferedReader br = new BufferedReader(new FileReader(file));
-        String line;
-        String nameVotes[]; //[0]is a candidate's name and [1] is their encrypted subtotal
-
-        //every line of the file is an office and its votes
-        line = br.readLine();
-        while (line != null)
-        {
-            nameVotes = line.split(": ");
-            encryptedSubtotals.put(nameVotes[0], new BigInteger(nameVotes[1]));
-            line = br.readLine();
-        }
-
-        return encryptedSubtotals;
-    }
-
-    private static boolean isServerReadytoSupplyPK() throws Exception
-    {
-        boolean rv = false;
-
-
-
         //ask server if it needs a key to be generated
-        os.writeUTF("needKey?");
+        os.writeUTF("haveKey?");
         os.flush();
 
-        rv = !is.readUTF().equals("yes");
+        if (is.readUTF().equals("no"))
+            return false;
 
         bitLength = Integer.parseInt(is.readUTF());
         certainty = Integer.parseInt(is.readUTF());
 
 
-
-        return rv;
+        return true;
     }
 
-    private static void getFinalTally() throws Exception
-    {
 
-
-        //ask server to print results
-        os.writeUTF("sendingResults");
-        os.flush();
-
-        for (HashMap.Entry<String, BigInteger> entry : encryptedSubtotals.entrySet())
-        {
-            os.writeUTF(entry.getKey());
-            os.flush();
-            os.writeUTF(entry.getValue().toString());
-            os.flush();
-        }
-        os.writeUTF("END");
-
-        os.flush();
-
-    }
 
 }

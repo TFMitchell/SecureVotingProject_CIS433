@@ -196,7 +196,7 @@ public class ClientGUI
                 }
                 try
                 {ConfirmScreen(selected);} //go to confirmation screen
-                catch(Exception e) {System.out.printf("Server couldn't start connection\n");}
+                catch(Exception e) {}
             }
         });
 
@@ -286,7 +286,7 @@ public class ClientGUI
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 try {Client.CastVote(selected);}
-                catch(Exception e) {System.out.printf("Server couldn't start connection\n");}
+                catch(Exception e) {}
                 WaitScreen(selected);
             }
         });
