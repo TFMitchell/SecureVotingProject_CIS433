@@ -37,6 +37,9 @@ public class Server
     public static int firstPort = 0; //that will be the admin's 0 index partner
     public static int shareCounter = 0;
 
+
+    public static float candidate_counts[][];
+
     public static void main(String args[]) throws Exception // [0] should say "admin:" [1] = the port of the admin server [1-2] are fellow server ports and [3+] are client ports.
 
     {
@@ -169,10 +172,18 @@ public class Server
     {
         System.out.printf("These are the results:\n");
 
+        candidate_counts = new float [CandidateNames.size()][];
+        int row = 0;
         for (String office : CandidateNames)
         {
             String names[] = office.split(", ");
+
+
+
+
+
             officesAndVotes.get(names[0]); //the first after splitting is the office name
+            candidate_counts[row] = new float[names.length - 1];
 
             BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), pk, sk);
 
@@ -182,10 +193,15 @@ public class Server
             {
                 BigInteger whole = remainder.divide(new BigInteger( Integer.toString( (int) Math.pow(Client.totalVoters + 1, i - 1)) ));
                 System.out.printf("%s got %d votes.\n", names[i], whole);
+
+                //save the count for access by GUI
+                candidate_counts[row][i-1] = whole.floatValue();
+
+
                 remainder = decryptedOffice.mod(new BigInteger( Integer.toString( (int) Math.pow(Client.totalVoters + 1, i - 1)) ));
 
             }
-
+            row++;
         }
     }
 

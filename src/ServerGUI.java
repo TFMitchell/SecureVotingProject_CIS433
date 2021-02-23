@@ -11,6 +11,9 @@
 
 import java.awt.*;
 import java.awt.event.*;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
 import javax.swing.*;
 
 public class ServerGUI
@@ -112,6 +115,49 @@ public class ServerGUI
         JLabel instructions = new JLabel("Voting Results", SwingConstants.CENTER);
         instructions.setBounds(100,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
+
+        JLabel options[][] = new JLabel[Server.CandidateNames.size()][20];
+
+        int i = 0; //keep track of how many Offices we've listed so far
+        for (String position : Server.CandidateNames)//repeat this section for each office up for election
+        {
+            String names[] = position.split(", ");
+
+            //the name of each office
+            JLabel office = new JLabel(names[0], SwingConstants.LEFT);
+            office.setBounds(100, 130 + 150 * i, 200, 70);
+            office.setFont(new Font("Tacoma", Font.PLAIN, 18));
+            frame.getContentPane().add(office);
+
+            //calculate the total for the office
+            double total = 0.0;
+            for (int rapid = 0; rapid < Server.candidate_counts[i].length; rapid++)
+            {
+                total += Server.candidate_counts[i][rapid];
+            }
+
+
+            //int n = 0; //keep track of how many candidates for this office we've listed
+            for (int n = names.length - 1; n > 0; n--) //for each candidate in this office
+            {
+                //add the candidate names to labels
+                options[i][n - 1] = new JLabel(names[n], SwingConstants.LEFT);
+                options[i][n - 1].setBounds(100 + 275 * (n - 1), 180 + 150 * i, 150, 40);
+                options[i][n - 1].setFont(new Font("Tacoma", Font.PLAIN, 16));
+
+                //calculate the percentage and add to corresponding labels
+                double quick =  Server.candidate_counts[i][n-1]/total;
+                String temp = String.valueOf(quick).concat("%");
+                options[i][10 + n - 1] = new JLabel(temp, SwingConstants.LEFT);
+                options[i][10 + n - 1].setBounds(100 + 275 * (n - 1), 230 + 150 * i, 150, 40);
+                options[i][10 + n - 1].setFont(new Font("Tacoma", Font.PLAIN, 16));
+
+                frame.getContentPane().add(options[i][n - 1]);
+                frame.getContentPane().add(options[i][10 + n - 1]);
+            }
+            i++;
+
+        }
 
 
         //repeat this section for each vote
