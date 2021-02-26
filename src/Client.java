@@ -43,42 +43,20 @@ public class Client
 
         ClientGUI myGUI = new ClientGUI(); //set up the GUI
 
-        socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
-        os = new ObjectOutputStream(socket.getOutputStream());
-        is = new ObjectInputStream(socket.getInputStream());
+        boolean connected = false;
 
-
-
-        /**ArrayList<String> candidates = getCandidates(); //get list of candidates from server (TA)
-
-        //printing the names out temporarily while GUI is worked on
-        for (String name : candidates)
+        while (!connected)
         {
-            System.out.printf("Name from server: %s\n", name);
+            try
+            {
+                Thread.sleep(1000);
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                os = new ObjectOutputStream(socket.getOutputStream());
+                is = new ObjectInputStream(socket.getInputStream());
+                connected = true;
+            } catch (Exception e){System.out.printf("Waiting on server...\n");};
         }
-        **/
 
-        /**
-        //getting and printing out the names and encrypted vote subtotals that were saved
-        encryptedSubtotals = readFile();
-        for (HashMap.Entry<String, BigInteger> entry : encryptedSubtotals.entrySet())
-        {
-            System.out.printf("From file: %s: %d\n", entry.getKey(), entry.getValue());
-        }**/
-
-        /**
-         suggestion for multiple candidate naming scheme:
-         role_(position)_candidate1_candidate2_candidate3_
-         *
-         */
-
-        //TODO handle possible conflict between names provided by server and names in saved file
-
-        //not random at the moment
-        //BigInteger r = new BigInteger("25");//new BigInteger(512, new Random()); //generate r
-
-
-        //give server some time to recover from getting pk. We'll need to have a fix for multiple clients.
         officesAndCandidates = getCandidates();
 
         while(!isServerReadyToSupplyPK())
@@ -87,39 +65,6 @@ public class Client
         }
 
         getPK();
-
-
-        //simulate votes and put them in the file
-        /**
-        //making and encrypting a vote for Thomas
-        BigInteger vote1 = new BigInteger("1");
-        BigInteger encryptedVote1 = Crypto.encrypt(vote1, r, pk);
-        encryptedSubtotals.put("Thomas Mitchell", Crypto.addEncrypted(encryptedSubtotals.get("Thomas Mitchell"), encryptedVote1, pk[0])); //adding to subtotal
-
-        //making and encrypting another vote for Thomas
-        BigInteger vote2 = new BigInteger("1");
-        BigInteger encryptedVote2 = Crypto.encrypt(vote2, r, pk);
-        encryptedSubtotals.put("Thomas Mitchell", Crypto.addEncrypted(encryptedSubtotals.get("Thomas Mitchell"), encryptedVote2, pk[0])); //adding to subtotal
-
-        //making and encrypting a vote for Kevin
-        BigInteger vote3 = new BigInteger("1");
-        BigInteger encryptedVote3 = Crypto.encrypt(vote3, r, pk);
-        encryptedSubtotals.put("Kevin Kincaid", Crypto.addEncrypted(encryptedSubtotals.get("Kevin Kincaid"), encryptedVote3, pk[0])); //adding to subtotal
-
-
-
-        updateFile(encryptedSubtotals); //writing to disk
-
-        //getting the secret key. This wouldn't happen until after the polls closed. Even then, I don't know if the client will directly touch the secret key.
-        BigInteger[] sk = getSK();
-
-        //decrypt the summed votes and print
-        for (HashMap.Entry<String, BigInteger> entry : encryptedSubtotals.entrySet())
-        {
-            System.out.printf("%s got %d votes.\n", entry.getKey(), Crypto.decrypt(entry.getValue(), sk, pk[0]));
-        }
-
-         **/
 
 
     }
@@ -142,7 +87,7 @@ public class Client
                 biVote = new BigInteger("1");
             else
                 biVote = new BigInteger(Integer.toString((int) Math.pow(totalVoters + 1, selected[i] - 1))); //convert the vote to how it should be encrypted for homomorphic encryption to work
-            BigInteger encryptedVote = Crypto.encrypt(biVote, r, pk); //encrypt it
+            BigInteger encryptedVote = Crypto.encrypt(biVote, r, pk[0]); //encrypt it
 
             os.writeUTF("sendingBallot");
             os.writeUTF(encryptedVote.toString());
@@ -216,14 +161,18 @@ public class Client
         os.writeUTF("haveKey?");
         os.flush();
 
-        if (is.readUTF().equals("no"))
-            return false;
 
-        bitLength = Integer.parseInt(is.readUTF());
-        certainty = Integer.parseInt(is.readUTF());
+        if (is.readUTF().equals("yes"))
+        {
+            bitLength = Integer.parseInt(is.readUTF());
+            certainty = Integer.parseInt(is.readUTF());
+            return true;
+        }
 
 
-        return true;
+
+
+        return false;
     }
 
 

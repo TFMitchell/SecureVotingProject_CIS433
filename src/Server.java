@@ -30,7 +30,7 @@ public class Server
     public static HashMap<String, BigInteger> encryptedSubtotals; //keeps track of subtotals by office
     public static int serverPort;
     public static boolean admin = true;
-    public  static Random rand = new Random();
+    public static Random rand = new Random();
     public static Socket socket;
     public static ObjectOutputStream os;
     public static ObjectInputStream is;
@@ -51,8 +51,8 @@ public class Server
 
         if (admin)
         {
-            firstPort = Integer.parseInt(args[1]);
-            for (int i = 1; i < args.length; i++) //serving all of them
+            firstPort = Integer.parseInt(args[0]);
+            for (int i = 0; i < args.length; i++) //serving all of them
             {
                 portNums.add(Integer.parseInt(args[i]));
                 executor.execute(new ServerComm());
@@ -61,9 +61,9 @@ public class Server
         else
         {
 
-            for (int i = 3; i < args.length; i++)
+            for (int i = 2; i < args.length; i++)
             {
-                portNums.add(new Integer(args[i]));
+                portNums.add(Integer.parseInt(args[i]));
                 executor.execute(new ServerComm());
             }
 
@@ -84,13 +84,21 @@ public class Server
         readFile();
 
 
-
-
         if (!admin)
         {
-            socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPort);
-            os = new ObjectOutputStream(socket.getOutputStream());
-            is = new ObjectInputStream(socket.getInputStream());
+            boolean connected = false;
+
+            while (!connected)
+            {
+                try
+                {
+
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPort);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    connected = true;
+                } catch (Exception e){System.out.printf("Waiting on other server...\n");};
+            }
 
             os.writeUTF("haveKey?");
 
@@ -107,7 +115,7 @@ public class Server
         while(true)
         {
             Thread.sleep(5000);
-            getResults();
+            //getResults();
         }
 
     }
@@ -181,11 +189,10 @@ public class Server
 
 
 
-
             officesAndVotes.get(names[0]); //the first after splitting is the office name
             candidate_counts[row] = new float[names.length - 1];
 
-            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), pk, sk);
+            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), pk[0], sk[0]);
 
             BigInteger remainder = decryptedOffice;
 
@@ -318,16 +325,15 @@ class ServerComm implements Runnable
 
                 else if (line.equals("haveKey?"))
                 {
-                    if (!Server.admin)
-                        os.writeUTF("notAdmin");
-                    else if (Server.hasPQ)
-                        os.writeUTF("yes");
-                    else
-                        os.writeUTF("no");
 
-                    //regardless, we write back parameters
-                    os.writeUTF(Integer.toString(Server.bitLength));
-                    os.writeUTF(Integer.toString(Server.certainty));
+                    if (!Server.hasPQ)
+                        os.writeUTF("no");
+                    else
+                    {
+                        os.writeUTF(Integer.toString(Server.bitLength));
+                        os.writeUTF(Integer.toString(Server.certainty));
+                        os.writeUTF("yes");
+                    }
 
                     os.flush();
                 }
@@ -346,7 +352,7 @@ class ServerComm implements Runnable
                     else
                         officeSubTotal = Server.encryptedSubtotals.get(index);
 
-                    officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, Server.pk); //add the new vote to it
+                    officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, Server.pk[0]); //add the new vote to it
 
                     Server.encryptedSubtotals.put(index, officeSubTotal); //update the hashmap
 

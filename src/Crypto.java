@@ -12,50 +12,6 @@ import java.util.*;
 
 public class Crypto
 {
-    /**
-    public static BigInteger[][] keyPairGen(int bitLength, int certainty) //outputs [[n, g], [lambda, u]]
-    {
-        BigInteger rv[][] = new BigInteger[2][2]; //return value
-        BigInteger n, g, lambda, u; //declaring the four variables
-
-        //making random p and q
-        BigInteger p = new BigInteger(bitLength / 2, certainty, new Random());
-        BigInteger q = new BigInteger(bitLength / 2, certainty, new Random());
-
-        n = p.multiply(q); //n is their sum
-        BigInteger nSquared = n.multiply(n); //nSquared is commonly used, so it gets its own variable
-
-        g = new BigInteger("2"); //sample g value is 2
-
-        //setting up return values for the public key
-        rv[0][0] = n;
-        rv[0][1] = g;
-
-        //finding lambda
-        lambda = p.subtract(BigInteger.ONE)
-                .multiply(q.subtract(BigInteger.ONE))
-                .divide(p.subtract(BigInteger.ONE)
-                .gcd(q.subtract(BigInteger.ONE)));
-
-        //finding u
-        u = g.modPow(lambda, nSquared)
-                .subtract(BigInteger.ONE)
-                .divide(n)
-                .modInverse(n);
-
-        //check to make sure the g we picked was useful
-        if (u.gcd(n).intValue() != 1)
-        {
-            System.out.printf("Bad g. Try another.\n");
-            System.exit(-1);
-        }
-
-        //return the secret portion of the key
-        rv[1][0] = lambda;
-        rv[1][1] = u;
-
-        return rv;
-    }**/
 
     public static BigInteger[] getPK(BigInteger pq[])
     {
@@ -104,28 +60,30 @@ public class Crypto
         return rv;
     }
 
-    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger pk[])
+    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger N)
     {
         //makes the return statement easier to understand to declare here
-        BigInteger n = pk[0];
-        BigInteger g = pk[1];
-        BigInteger nSquared = n.multiply(n);
+
+        BigInteger g = N.add(BigInteger.ONE);
+        BigInteger nSquared = N.multiply(N);
 
         return g.modPow(m, nSquared)
-                .multiply(r.modPow(n, nSquared))
+                .multiply(r.modPow(N, nSquared))
                 .mod(nSquared);
     }
 
 
-    public static BigInteger decrypt(BigInteger c, BigInteger pk[], BigInteger sk[])
+    public static BigInteger decrypt(BigInteger c, BigInteger N, BigInteger theta)
     {
         //makes the return statement easier to understand to declare here
-        BigInteger lambda = sk[0];
-        BigInteger N = pk[0];
-        BigInteger u = sk[1];
-        BigInteger nSquared = N.multiply(N);
 
-        return c.modPow(lambda, nSquared)
+        BigInteger nSquared = N.multiply(N);
+        BigInteger u = N.add(BigInteger.ONE).modPow(theta, nSquared)
+                .subtract(BigInteger.ONE)
+                .divide(N)
+                .modInverse(N);
+
+        return c.modPow(theta, nSquared)
                 .subtract(BigInteger.ONE)
                 .divide(N)
                 .multiply(u)
@@ -133,13 +91,13 @@ public class Crypto
     }
 
     //this adds two encrypted ciphertexts together
-    public static BigInteger addEncrypted(BigInteger one, BigInteger two, BigInteger pk[])
+    public static BigInteger addEncrypted(BigInteger one, BigInteger two, BigInteger N)
     {
-        BigInteger nSquared = pk[0].multiply(pk[0]); //for simpler return statement
+        BigInteger nSquared = N.multiply(N); //for simpler return statement
 
-        if (one.equals(new BigInteger("0")))
+        if (one.equals(BigInteger.ZERO))
             return two;
-        else if (two.equals(new BigInteger("0")))
+        else if (two.equals(BigInteger.ZERO))
             return one;
         else
             return one.multiply(two)
