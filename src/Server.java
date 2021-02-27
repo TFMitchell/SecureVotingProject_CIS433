@@ -18,124 +18,97 @@ import java.util.concurrent.*;
 
 public class Server
 {
-    public static BigInteger pk[], sk[];
-    public static BigInteger PQCollection[][];
     public static ArrayList<String> CandidateNames = new ArrayList<>();
     public static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
-    public static boolean hasPQ = false;
-    public static int bitLength = 1024;
-    public static int certainty = 64;
-    public static ArrayList<Integer> portNums = new ArrayList<>();
+    public static boolean hasN = false;
+    public static int bitLength = 64;
+    public static  int myListeningPort;
+    public static int serverPortNums[];
+    public static int clientPortNums[];
     public static boolean running = true;
     public static HashMap<String, BigInteger> encryptedSubtotals; //keeps track of subtotals by office
-    public static int serverPort;
-    public static boolean admin = true;
     public static Random rand = new Random();
-    public static Socket socket;
-    public static ObjectOutputStream os;
-    public static ObjectInputStream is;
-    public static int firstPort = 0; //that will be the admin's 0 index partner
-    public static int shareCounter = 0;
-
+    public static int myIndex, numServers, numClients;
+    private static int totalVoters = 100;
+    public static int currentClientNum = 0;
+    public static BigInteger N, theta;
+    private static Socket socket;
+    private static ObjectOutputStream os;
+    private static ObjectInputStream is;
+    public static BigInteger pShareSum = BigInteger.ZERO;
+    public static BigInteger qShareSum = BigInteger.ZERO;
 
     public static float candidate_counts[][];
 
-    public static void main(String args[]) throws Exception // [0] should say "admin:" [1] = the port of the admin server [1-2] are fellow server ports and [3+] are client ports.
-
+    public static void main(String args[]) throws Exception
     {
         ServerGUI myGUI = new ServerGUI(); //set up the GUI
         ExecutorService executor = Executors.newCachedThreadPool();
 
-        if (args[0].equals("admin:"))
-            admin = false;
+        //interpret parameters
+        myIndex = Integer.parseInt(args[0]);
+        numServers = Integer.parseInt(args[1]);
 
-        if (admin)
+        myListeningPort = Integer.parseInt(args[2]);
+
+
+        executor.execute(new Listening());
+
+        serverPortNums = new int[numServers];
+        for (int i = 2; i < 2 + numServers; i++)
         {
-            firstPort = Integer.parseInt(args[0]);
-            for (int i = 0; i < args.length; i++) //serving all of them
-            {
-                portNums.add(Integer.parseInt(args[i]));
-                executor.execute(new ServerComm());
-            }
-        }
-        else
-        {
-
-            for (int i = 2; i < args.length; i++)
-            {
-                portNums.add(Integer.parseInt(args[i]));
-                executor.execute(new ServerComm());
-            }
-
-            serverPort = Integer.parseInt(args[1]);
+            serverPortNums[i-2] = Integer.parseInt(args[i]);
         }
 
-
-        //initializing the PQCollection
-        PQCollection = new BigInteger[3][2];
-        for (BigInteger[] PQ : PQCollection)
+        numClients = Integer.parseInt(args[numServers + 2]);
+        clientPortNums = new int[numClients];
+        for (int i = numServers + 3; i < numServers + 3 + numClients; i++)
         {
-            PQ[0] = BigInteger.ZERO;
-            PQ[1] = BigInteger.ZERO;
+            clientPortNums[i - numServers - 3] = Integer.parseInt(args[i]);
+            executor.execute(new ClientComm());
         }
+
 
         readCandidatesFromFile(); //read the candidate file and load it into the array
         retreiveKeysFromFile();
         readFile();
 
+        BigInteger pq[] = Crypto.genPQ(myIndex, bitLength, rand);
 
-        if (!admin)
+        System.out.printf("My P: %s Q: %s\n", pq[0], pq[1]);
+
+        for (int portNum : serverPortNums)
         {
-            boolean connected = false;
-
-            while (!connected)
+            while (true)
             {
                 try
                 {
-
-                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPort);
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
-                    connected = true;
-                } catch (Exception e){System.out.printf("Waiting on other server...\n");};
+                    os.writeUTF("sendingPQ");
+                    os.writeUTF(pq[0].toString());
+                    os.writeUTF(pq[1].toString());
+                    os.flush();
+
+                    break;
+                } catch (Exception e) { continue; }
             }
 
-            os.writeUTF("haveKey?");
-
-            while (is.readUTF().equals("no"))
-            {
-                PQGen();
-                Thread.sleep(300);
-                os.writeUTF("haveKey?");
-            }
         }
 
-        pkGen();
+        Thread.sleep(5000);
 
-        while(true)
-        {
-            Thread.sleep(5000);
-            //getResults();
-        }
+        System.out.printf("P: %s, Q: %s\n", pShareSum, qShareSum);
+
+        N = pShareSum.multiply(qShareSum);
+
+        hasN = true;
+
+
 
     }
 
-    public static void PQGen() throws Exception
-    {
-        BigInteger pq[] = new BigInteger[2];
-
-        pq[0] = new BigInteger(bitLength / 2 / 3, certainty, rand);
-        pq[1] = new BigInteger(bitLength / 2 / 3, certainty, rand);
-
-        os.writeUTF("sendingPQs");
-
-        os.writeUTF(Integer.toString(serverPort));
-
-        os.writeUTF(pq[0].toString());
-        os.writeUTF(pq[1].toString());
-        os.flush();
-
-    }
 
     //file handler for candidate list
     public static void readCandidatesFromFile() throws Exception
@@ -153,28 +126,6 @@ public class Server
         }
     }
 
-    public static void pkGen() //public key gen
-    {
-        BigInteger pqSums[] = new BigInteger[2];
-        pqSums[0] = BigInteger.ZERO;
-        pqSums[1] = BigInteger.ZERO;
-
-
-        for(BigInteger[] individPQ : PQCollection)
-        {
-            pqSums[0] = pqSums[0].add(individPQ[0]);
-            pqSums[1] = pqSums[1].add(individPQ[1]);
-        }
-
-        pk = Crypto.getPK(pqSums);
-
-        if (pk[0].signum() != 0) //this means it worked and we can say we don't need to make a PQ anymore
-        {
-            hasPQ = true;
-        }
-        else
-            shareCounter = 0;
-    }
 
     public static void getResults()
     {
@@ -192,20 +143,20 @@ public class Server
             officesAndVotes.get(names[0]); //the first after splitting is the office name
             candidate_counts[row] = new float[names.length - 1];
 
-            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), pk[0], sk[0]);
+            BigInteger decryptedOffice = Crypto.decrypt(officesAndVotes.get(names[0]), N, theta);
 
             BigInteger remainder = decryptedOffice;
 
             for (int i = names.length - 1; i > 0; i--)
             {
-                BigInteger whole = remainder.divide(new BigInteger( Integer.toString( (int) Math.pow(Client.totalVoters + 1, i - 1)) ));
+                BigInteger whole = remainder.divide(new BigInteger( Integer.toString( (int) Math.pow(totalVoters + 1, i - 1)) ));
                 System.out.printf("%s got %d votes.\n", names[i], whole);
 
                 //save the count for access by GUI
                 candidate_counts[row][i-1] = whole.floatValue();
 
 
-                remainder = decryptedOffice.mod(new BigInteger( Integer.toString( (int) Math.pow(Client.totalVoters + 1, i - 1)) ));
+                remainder = decryptedOffice.mod(new BigInteger( Integer.toString( (int) Math.pow(totalVoters + 1, i - 1)) ));
 
             }
             row++;
@@ -225,15 +176,10 @@ public class Server
             return;
         }
         //else
-        pk[0] = new BigInteger(line);
-        line = br.readLine();
-        pk[1] = new BigInteger(line);
+        N = new BigInteger(line);
+        theta = new BigInteger(br.readLine());
 
-        sk[0] = new BigInteger(line);
-        line = br.readLine();
-        sk[1] = new BigInteger(line);
-
-        hasPQ = true;
+        hasN = true;
     }
     //reads existing subtotals from the appropriately-named file in the working directory
     private static void readFile() throws Exception
@@ -278,15 +224,17 @@ public class Server
 
 }
 
-class ServerComm implements Runnable
+class ClientComm implements Runnable
 {
+
     public void run()
     {
+        int myIndex = Server.currentClientNum++;
 
         try
         {
             //getting ready to receive input
-            ServerSocket serverSocket = new ServerSocket(Server.portNums.remove(0));
+            ServerSocket serverSocket = new ServerSocket(Server.clientPortNums[myIndex]);
             String line;
             Socket clientSocket = serverSocket.accept();
             ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
@@ -294,23 +242,20 @@ class ServerComm implements Runnable
 
             while (Server.running)
             {
+
+
                 line = is.readUTF();
 
-                if (line.equals("getPK"))  //send public key
+                if (line.equals("getN"))  //send public key
                 {
-                    os.writeUTF(Server.pk[0].toString());
-                    os.writeUTF(Server.pk[1].toString());
+                    os.writeUTF(Server.N.toString());
 
                     os.flush();
 
-                } else if (line.equals("getSK"))  //send secret key
-                {
-                    os.writeUTF(Server.pk[0].toString());
-                    os.writeUTF(Server.pk[1].toString());
 
-                    os.flush();
+                }
 
-                } else if (line.equals("getCandidates"))  //send candidates
+                else if (line.equals("getCandidates"))  //send candidates
                 {
 
                     for (String name : Server.CandidateNames) {
@@ -326,17 +271,18 @@ class ServerComm implements Runnable
                 else if (line.equals("haveKey?"))
                 {
 
-                    if (!Server.hasPQ)
+                    if (!Server.hasN)
                         os.writeUTF("no");
                     else
                     {
-                        os.writeUTF(Integer.toString(Server.bitLength));
-                        os.writeUTF(Integer.toString(Server.certainty));
                         os.writeUTF("yes");
+                        os.writeUTF(Integer.toString(Server.bitLength));
                     }
 
                     os.flush();
                 }
+
+
 
                 else if (line.equals("sendingBallot"))
                 {
@@ -352,31 +298,86 @@ class ServerComm implements Runnable
                     else
                         officeSubTotal = Server.encryptedSubtotals.get(index);
 
-                    officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, Server.pk[0]); //add the new vote to it
+                    officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, Server.N); //add the new vote to it
 
                     Server.encryptedSubtotals.put(index, officeSubTotal); //update the hashmap
 
                 }
-                else if (line.equals("sendingPQs"))
-                {
-                    int index;
-                    if (Integer.parseInt(is.readUTF()) == Server.firstPort)
-                        index = 0;
-                    else
-                        index = 1;
 
-                    Server.PQCollection[index][0] = new BigInteger(is.readUTF());
-                    Server.PQCollection[index][1] = new BigInteger(is.readUTF());
-
-                    if (++Server.shareCounter == 2)
-                        Server.pkGen();
-                }
                 else
                     System.out.printf("Unexpected message arrived at server: %s\n", line);
+
+
             }
 
-        } catch(Exception e) {System.out.printf("Server couldn't start connection. %s\n", e);}
+        }catch(Exception e) {System.out.printf("Server couldn't start connection. %s\n", e);}
 
 
     }
+}
+
+class Listening implements Runnable {
+
+    public void run() {
+
+
+        while (Server.running)
+        {
+            try
+            {
+                //getting ready to receive input
+                ServerSocket serverSocket = new ServerSocket(Server.myListeningPort);
+                String line;
+                Socket clientSocket = serverSocket.accept();
+                ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
+                ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
+
+                line = is.readUTF();
+
+
+                if (line.equals("sendingPQ"))
+                {
+                    Server.pShareSum = Server.pShareSum.add(new BigInteger(is.readUTF()));
+                    Server.qShareSum = Server.qShareSum.add(new BigInteger(is.readUTF()));
+
+                    os.flush();
+                }
+                else
+                    System.out.printf("Unexpected message arrived at server: %s\n", line);
+
+                serverSocket.close();
+            } catch (Exception e) {
+                System.out.printf("Server couldn't start connection. %s\n", e); }
+
+        }
+    }
+}
+
+
+class Polynomial
+{
+    private final BigInteger a[];
+
+    public Polynomial(int degree, BigInteger intercept, int bitLength, Random rand)
+    {
+        a = new BigInteger[degree + 1];
+        a[0] = intercept;
+        for (int i = 1; i < degree + 1; i++) {
+            a[i] = new BigInteger(bitLength, rand);
+        }
+    }
+
+    public BigInteger getValueAt(int x)
+    {
+        BigInteger rv = a[0];
+
+        for (int i = 1; i < a.length; i++)
+        {
+            rv = rv.add(a[i].multiply(new BigInteger(Integer.toString((int) Math.pow(x, i)))));
+        }
+
+        return rv;
+    }
+
+
 }

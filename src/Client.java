@@ -14,9 +14,6 @@ import java.lang.reflect.Array;
 import java.net.*;
 import java.math.*;
 import java.util.*;
-import java.util.concurrent.*;
-
-import static java.lang.String.valueOf;
 
 public class Client
 {
@@ -24,17 +21,14 @@ public class Client
     public String name = "poll1";
     //iterating the name for the vote is     name_count
 
-
-    private static BigInteger[] pq = new BigInteger[2];
-    private static BigInteger[] pk = new BigInteger[2];
-    private static BigInteger[] sk = new BigInteger[2];
-    public static int totalVoters = 100;
+    private static BigInteger N, theta;
+    private static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
     private static int bitLength, certainty; //will be updated by main
     private static int portNum;
-    public static Socket socket;
-    public static ObjectOutputStream os;
-    public static ObjectInputStream is;
+    private static Socket socket;
+    private static ObjectOutputStream os;
+    private static ObjectInputStream is;
 
 
     public static void main(String args[]) throws Exception //args[0] is port
@@ -57,15 +51,16 @@ public class Client
             } catch (Exception e){System.out.printf("Waiting on server...\n");};
         }
 
-        officesAndCandidates = getCandidates();
+        officesAndCandidates = getCandidates(); //getFromServer
 
-        while(!isServerReadyToSupplyPK())
+        while(!isServerReadyToSupplyPK()) //wait until N can be supplied from server
         {
-            Thread.sleep(500);
+            Thread.sleep(1000);
         }
 
-        getPK();
+        getPK(); //get N from Server
 
+        System.out.printf("N: %s\n", N);
 
     }
 
@@ -75,11 +70,12 @@ public class Client
         BigInteger r;
         do {
             r = new BigInteger(bitLength - 1, new Random()); //generate r
-        } while (r.gcd(pk[0]).signum() != 1);
+        } while (r.gcd(N).signum() != 1);
 
 
         int i = 0; //keep track of which office
-        for (HashMap.Entry<String, ArrayList<String>> entry : officesAndCandidates.entrySet()) {
+        for (HashMap.Entry<String, ArrayList<String>> entry : officesAndCandidates.entrySet())
+        {
             BigInteger biVote;
             if (selected[i] == 0)
                 biVote = new BigInteger("0");
@@ -87,7 +83,7 @@ public class Client
                 biVote = new BigInteger("1");
             else
                 biVote = new BigInteger(Integer.toString((int) Math.pow(totalVoters + 1, selected[i] - 1))); //convert the vote to how it should be encrypted for homomorphic encryption to work
-            BigInteger encryptedVote = Crypto.encrypt(biVote, r, pk[0]); //encrypt it
+            BigInteger encryptedVote = Crypto.encrypt(biVote, r, N); //encrypt it
 
             os.writeUTF("sendingBallot");
             os.writeUTF(encryptedVote.toString());
@@ -105,12 +101,11 @@ public class Client
     {
 
         //give server command
-        os.writeUTF("getPK");
+        os.writeUTF("getN");
         os.flush();
 
         //get information back from server
-        pk[0] = new BigInteger(is.readUTF());
-        pk[1] = new BigInteger(is.readUTF());
+        N = new BigInteger(is.readUTF());
 
     }
 
@@ -124,9 +119,7 @@ public class Client
         os.flush();
 
         //get secret key
-        sk[0] = new BigInteger(is.readUTF());
-        sk[1] = new BigInteger(is.readUTF());
-
+        theta = new BigInteger(is.readUTF());
     }
 
     //routine to get the candidate list from server
@@ -161,20 +154,13 @@ public class Client
         os.writeUTF("haveKey?");
         os.flush();
 
-
         if (is.readUTF().equals("yes"))
         {
             bitLength = Integer.parseInt(is.readUTF());
-            certainty = Integer.parseInt(is.readUTF());
             return true;
         }
 
-
-
-
         return false;
     }
-
-
 
 }
