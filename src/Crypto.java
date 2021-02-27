@@ -12,53 +12,36 @@ import java.util.*;
 
 public class Crypto
 {
+    private static final BigInteger THREE = new BigInteger("3");
+    private static final BigInteger FOUR = new BigInteger("4");
 
-    public static BigInteger[] getPK(BigInteger pq[])
+    public static BigInteger[] genPQ(int myIndex, int rsaPrimesBitlength, Random rand)
     {
         BigInteger rv[] = new BigInteger[2];
-        BigInteger N = pq[0].multiply(pq[1]);
 
-        if (!N.gcd(pq[0].subtract(BigInteger.ONE).multiply(pq[1].subtract(BigInteger.ONE))).equals(BigInteger.ONE) //if gcd not == 1
-
-                || N.mod(new BigInteger("4")).equals(new BigInteger("3"))) //biprimality check
-
-        //|| factorialCalc(pq[0].subtract(BigInteger.ONE)).add(BigInteger.ONE).mod(pq[0]).signum() != 0    //if p isn't prime
-        //|| factorialCalc(pq[1].subtract(BigInteger.ONE)).add(BigInteger.ONE).mod(pq[1]).signum() != 0)   //if q isn't prime
+        if(myIndex == 1)
         {
-            rv[0] = BigInteger.ZERO;
-            rv[1] = BigInteger.ZERO;
-            return rv;
+            do
+            {
+                rv[0] = new BigInteger(rsaPrimesBitlength, rand);
+                rv[1] = new BigInteger(rsaPrimesBitlength, rand);
+
+            } while (!rv[0].mod(FOUR).equals(THREE) || ! rv[1].mod(FOUR).equals(THREE));
+
         }
-        //else
-        rv[0] = N;
-        rv[1] = N.subtract(BigInteger.ONE);
+        else
+        {
+            do
+            {
+                rv[0] = new BigInteger(rsaPrimesBitlength, rand);
+                rv[1] = new BigInteger(rsaPrimesBitlength, rand);
 
-        return rv;
-
-    }
-
-    public static BigInteger[] getSK(BigInteger pk[], BigInteger pq[])
-    {
-        //finding lambda (this is (p - 1) * (q - 1) / gcd of (p - 1) * (q - 1), which is the lcm)
-        BigInteger lambda = pq[0].subtract(BigInteger.ONE)
-                .multiply(pq[1].subtract(BigInteger.ONE))
-                .divide(pq[0].subtract(BigInteger.ONE)
-                        .gcd(pq[1].subtract(BigInteger.ONE)));
-
-        //finding u: g^lambda mod n^2 - 1 all over N and mod inverse N
-        BigInteger u = pk[1].modPow(lambda, pk[0].multiply(pk[0]))
-                .subtract(BigInteger.ONE)
-                .divide(pk[0])
-                .modInverse(pk[0]);
-
-
-        BigInteger rv[] = new BigInteger[2];
-        rv[0] = lambda;
-        rv[1] = u;
-
+            } while (!rv[0].mod(FOUR).equals(BigInteger.ZERO) || ! rv[1].mod(FOUR).equals(BigInteger.ZERO));
+        }
 
         return rv;
     }
+
 
     public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger N)
     {

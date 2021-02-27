@@ -5,7 +5,7 @@
     <option name="MAIN_CLASS_NAME" value="Client" />
     <module name="SecureVotingProject_CIS433" />
     <option name="PROGRAM_PARAMETERS" value="1337" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/Client on 1337" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/Production" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
