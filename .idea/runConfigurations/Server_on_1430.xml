@@ -4,7 +4,7 @@
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="Server" />
     <module name="SecureVotingProject_CIS433" />
-    <option name="PROGRAM_PARAMETERS" value="5 5 670 671 1340 1343 1430 1 679" />
+    <option name="PROGRAM_PARAMETERS" value="5 7 670 671 1340 1343 1430 1431 1432 1 679" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/Server on 1430" />
     <method v="2">
       <option name="Make" enabled="true" />

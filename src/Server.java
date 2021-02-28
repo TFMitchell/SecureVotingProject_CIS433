@@ -114,12 +114,10 @@ public class Server
     {
         pq = Crypto.genPQ(myIndex, bitLength, rand);
 
-        Polynomial pSharing = Polynomial.generateShamirPSharings(2, pq[0], bitLength, rand);
-        Polynomial qSharing = Polynomial.generateShamirPSharings(2, pq[1], bitLength, rand);
+        Polynomial pSharing = Polynomial.generateShamirPSharings(3, pq[0], bitLength, rand);
+        Polynomial qSharing = Polynomial.generateShamirPSharings(3, pq[1], bitLength, rand);
 
-        while (!myTurn) { Thread.sleep(5);
-        //System.out.printf("waiting 114\n");
-        }
+        while (!myTurn) { Thread.sleep(5); }
 
         for (int i = 0; i < numServers; i ++)//(int portNum : serverPortNums)
         {
@@ -141,31 +139,13 @@ public class Server
             }
         }
 
+        passTurn();
 
-        while (true)
-        {
-            try
-            {
-                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
-                os = new ObjectOutputStream(socket.getOutputStream());
-                is = new ObjectInputStream(socket.getInputStream());
-                os.writeUTF("yourTurn");
-                myTurn = false;
-                os.flush();
-
-                break;
-            } catch (Exception e) {}
-        }
-
-
-        while (!myTurn) { Thread.sleep(5);
-            //System.out.printf("waiting 155\n");
-        }
+        while (!myTurn) { Thread.sleep(5); }
 
 
         BigInteger pShareSum = BigInteger.ZERO;
         BigInteger qShareSum = BigInteger.ZERO;
-
 
         for (int i = 0; i < numServers; i++)
         {
@@ -195,25 +175,10 @@ public class Server
             }
         }
 
-        while (true)
-        {
-            try
-            {
-                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
-                os = new ObjectOutputStream(socket.getOutputStream());
-                is = new ObjectInputStream(socket.getInputStream());
-                os.writeUTF("yourTurn");
-                myTurn = false;
-                os.flush();
-
-                break;
-            } catch (Exception e) {}
-        }
+        passTurn();
 
 
-        while (!myTurn) { Thread.sleep(5);
-            //System.out.printf("waiting 155\n");
-        }
+        while (!myTurn) { Thread.sleep(5); }
 
         BigInteger tmp[][] = new BigInteger[numServers][2];
 
@@ -226,8 +191,7 @@ public class Server
 
         N = Crypto.lagrangeGetSecret(tmp).divide(delta);
 
-
-        if (myIndex == 1)
+        if (myIndex == 1) //one of them has to choose a gg
         {
             gg = Crypto.getGG(N, rand);
             for (int portNum : serverPortNums)
@@ -271,33 +235,19 @@ public class Server
         }
         System.out.printf("N: %s iteration %d\n", N, iterationNum++);
 
-       while (true)
-        {
-            try
-            {
-                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
-                os = new ObjectOutputStream(socket.getOutputStream());
-                is = new ObjectInputStream(socket.getInputStream());
-                os.writeUTF("yourTurn");
-                myTurn = false;
-                os.flush();
+       passTurn();
 
-                break;
-            } catch (Exception e) {}
-        }
-
-
-
-        while (!myTurn) { Thread.sleep(5);
-            //System.out.printf("waiting 233\n");
-        }
-
-
-
+        while (!myTurn) { Thread.sleep(5); }
 
         if (!Crypto.isBiprimal(N, rand, Qi))
             genBiprimalN();
 
+        passTurn();
+
+    }
+
+    private static void passTurn()
+    {
         while (true)
         {
             try
@@ -312,7 +262,6 @@ public class Server
                 break;
             } catch (Exception e) {}
         }
-
     }
 
 

@@ -5,6 +5,8 @@
     <toRun name="Server on 671" type="Application" />
     <toRun name="Server on 1343" type="Application" />
     <toRun name="Server on 670" type="Application" />
+    <toRun name="Server on 1432" type="Application" />
+    <toRun name="Server on 1431" type="Application" />
     <method v="2" />
   </configuration>
 </component>
