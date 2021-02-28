@@ -157,4 +157,41 @@ public class Crypto
                     .mod(nSquared);
     }
 
+    public static BigInteger lagrangeGetSecret(BigInteger points[][])
+    {
+        BigInteger result = BigInteger.ZERO; // Initialize result
+
+        for (int i = 0; i < points.length; i++)
+        {
+            // Compute individual terms of above formula
+            BigInteger term = points[i][1];
+            for (int j = 0; j < points.length; j++)
+            {
+                if (j == i) //would be division by zero
+                    continue;
+
+
+                term = term.multiply(BigInteger.ZERO.subtract(points[j][0]))
+                        .divide(points[i][0].subtract(points[j][0]));
+            }
+
+            // Add current term to result
+            result = result.add(term);
+        }
+
+        return result;
+    }
+
+    public static BigInteger factorial(int N)
+    {
+        // Initialize result
+        BigInteger f = BigInteger.ONE;
+
+        // Multiply f with 2, 3, ...N
+        for (int i = 2; i <= N; i++)
+            f = f.multiply(BigInteger.valueOf(i));
+
+        return f;
+    }
+
 }

@@ -26,5 +26,15 @@ public class Polynomial
         return rv;
     }
 
+    public static Polynomial generateShamirPSharings(int threshold, BigInteger p, int rsaPrimesBitlength, Random rand)
+    {
+        return new Polynomial(threshold - 1, p, rsaPrimesBitlength, rand);
+    }
+
+    public static Polynomial generateShamirFSharings(int threshold, BigInteger q, int rsaPrimesBitlength, Random rand)
+    {
+        return new Polynomial(threshold - 1, q, rsaPrimesBitlength, rand);
+    }
+
 
 }

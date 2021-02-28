@@ -38,11 +38,13 @@ public class Server
     public static BigInteger pq[];
     public static BigInteger pShares[];
     public static BigInteger qShares[];
+    public static BigInteger nShares[];
     public static BigInteger gg;
     public static BigInteger Qi[];
     public static boolean myTurn = false;
     public static int nextServerPort;
     private static int iterationNum = 0;
+    public static BigInteger delta;
 
     public static float candidate_counts[][];
 
@@ -55,7 +57,7 @@ public class Server
         //interpret parameters
         myIndex = Integer.parseInt(args[0]);
         numServers = Integer.parseInt(args[1]);
-
+        delta = Crypto.factorial(numServers);
 
 
         if (myIndex == 1)
@@ -90,6 +92,7 @@ public class Server
 
         pShares = new BigInteger[numServers];
         qShares = new BigInteger[numServers];
+        nShares = new BigInteger[numServers];
         Qi = new BigInteger[numServers];
 
         readCandidatesFromFile(); //read the candidate file and load it into the array
@@ -111,23 +114,26 @@ public class Server
     {
         pq = Crypto.genPQ(myIndex, bitLength, rand);
 
-        while (!myTurn) { Thread.sleep(50);
+        Polynomial pSharing = Polynomial.generateShamirPSharings(2, pq[0], bitLength, rand);
+        Polynomial qSharing = Polynomial.generateShamirPSharings(2, pq[1], bitLength, rand);
+
+        while (!myTurn) { Thread.sleep(5);
         //System.out.printf("waiting 114\n");
         }
 
-        for (int portNum : serverPortNums)
+        for (int i = 0; i < numServers; i ++)//(int portNum : serverPortNums)
         {
             while (true)
             {
                 try
                 {
-                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPortNums[i]);
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingPQ");
                     os.writeUTF(Integer.toString(myIndex - 1));
-                    os.writeUTF(pq[0].toString());
-                    os.writeUTF(pq[1].toString());
+                    os.writeUTF(pSharing.getValueAt(i + 1).toString());
+                    os.writeUTF(qSharing.getValueAt(i + 1).toString());
                     os.flush();
 
                     break;
@@ -152,7 +158,7 @@ public class Server
         }
 
 
-        while (!myTurn) { Thread.sleep(50);
+        while (!myTurn) { Thread.sleep(5);
             //System.out.printf("waiting 155\n");
         }
 
@@ -167,7 +173,58 @@ public class Server
             qShareSum = qShareSum.add(qShares[i]);
         }
 
-        N = pShareSum.multiply(qShareSum);
+        BigInteger Ni = pShareSum.multiply(qShareSum);
+
+        for (int portNum : serverPortNums)
+        {
+            while (true)
+            {
+                try
+                {
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    os.writeUTF("sendingNi");
+                    os.writeUTF(Integer.toString(myIndex - 1));
+                    os.writeUTF(Ni.toString());
+                    os.flush();
+
+                    break;
+
+                } catch (Exception e) { }
+            }
+        }
+
+        while (true)
+        {
+            try
+            {
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
+                os = new ObjectOutputStream(socket.getOutputStream());
+                is = new ObjectInputStream(socket.getInputStream());
+                os.writeUTF("yourTurn");
+                myTurn = false;
+                os.flush();
+
+                break;
+            } catch (Exception e) {}
+        }
+
+
+        while (!myTurn) { Thread.sleep(5);
+            //System.out.printf("waiting 155\n");
+        }
+
+        BigInteger tmp[][] = new BigInteger[numServers][2];
+
+        for (int i = 0; i < tmp.length; i++)
+        {
+            tmp[i][0] = new BigInteger(Integer.toString( i + 1));
+            tmp[i][1] = nShares[i].multiply(delta);
+
+        }
+
+        N = Crypto.lagrangeGetSecret(tmp).divide(delta);
 
 
         if (myIndex == 1)
@@ -230,7 +287,8 @@ public class Server
         }
 
 
-        while (!myTurn) { Thread.sleep(50);
+
+        while (!myTurn) { Thread.sleep(5);
             //System.out.printf("waiting 233\n");
         }
 
@@ -489,6 +547,11 @@ class Listening implements Runnable {
                 {
                     int index = Integer.parseInt(is.readUTF());
                     Server.Qi[index] = new BigInteger(is.readUTF());
+                }
+                else if (line.equals("sendingNi"))
+                {
+                    int index = Integer.parseInt(is.readUTF());
+                    Server.nShares[index] = new BigInteger(is.readUTF());
                 }
 
                 else if (line.equals("yourTurn"))
