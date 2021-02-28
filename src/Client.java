@@ -24,7 +24,7 @@ public class Client
     private static BigInteger N, theta;
     private static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
-    private static int bitLength, certainty; //will be updated by main
+    private static int bitLength;
     private static int portNum;
     private static Socket socket;
     private static ObjectOutputStream os;

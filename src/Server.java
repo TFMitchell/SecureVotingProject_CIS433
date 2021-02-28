@@ -21,7 +21,7 @@ public class Server
     public static ArrayList<String> CandidateNames = new ArrayList<>();
     public static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
     public static boolean hasN = false;
-    public static int bitLength = 64;
+    public static int bitLength = 16;
     public static  int myListeningPort;
     public static int serverPortNums[];
     public static int clientPortNums[];
@@ -35,13 +35,19 @@ public class Server
     private static Socket socket;
     private static ObjectOutputStream os;
     private static ObjectInputStream is;
-    public static BigInteger pShareSum = BigInteger.ZERO;
-    public static BigInteger qShareSum = BigInteger.ZERO;
+    public static BigInteger pq[];
+    public static BigInteger pShares[];
+    public static BigInteger qShares[];
+    public static BigInteger gg;
+    public static BigInteger Qi[];
+    public static int serverTurn = 1;
+    private static int iterationNum = 0;
 
     public static float candidate_counts[][];
 
     public static void main(String args[]) throws Exception
     {
+
         ServerGUI myGUI = new ServerGUI(); //set up the GUI
         ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -68,14 +74,31 @@ public class Server
             executor.execute(new ClientComm());
         }
 
+        pShares = new BigInteger[numServers];
+        qShares = new BigInteger[numServers];
+        Qi = new BigInteger[numServers];
 
         readCandidatesFromFile(); //read the candidate file and load it into the array
         retreiveKeysFromFile();
         readFile();
 
-        BigInteger pq[] = Crypto.genPQ(myIndex, bitLength, rand);
+        genBiprimalN();
 
-        System.out.printf("My P: %s Q: %s\n", pq[0], pq[1]);
+        Thread.sleep(5000);
+
+        System.out.printf("N: %s\n", N);
+
+
+        hasN = true;
+
+    }
+
+    public static void genBiprimalN() throws Exception
+    {
+        pq = Crypto.genPQ(myIndex, bitLength, rand);
+
+        while (serverTurn != myIndex) { Thread.sleep(1);
+        }
 
         for (int portNum : serverPortNums)
         {
@@ -87,25 +110,121 @@ public class Server
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingPQ");
+                    os.writeUTF(Integer.toString(myIndex - 1));
                     os.writeUTF(pq[0].toString());
                     os.writeUTF(pq[1].toString());
                     os.flush();
 
                     break;
-                } catch (Exception e) { continue; }
+                } catch (Exception e) {}
             }
-
         }
 
-        Thread.sleep(5000);
+        for (int portNum : serverPortNums)
+        {
+            while (true)
+            {
+                try
+                {
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    os.writeUTF("advanceTurn");
+                    os.flush();
 
-        System.out.printf("P: %s, Q: %s\n", pShareSum, qShareSum);
+                    break;
+                } catch (Exception e) {}
+            }
+        }
+
+        while (serverTurn != myIndex) {
+            Thread.sleep(1);
+        }
+
+        BigInteger pShareSum = BigInteger.ZERO;
+        BigInteger qShareSum = BigInteger.ZERO;
+
+
+        for (int i = 0; i < numServers; i++)
+        {
+            pShareSum = pShareSum.add(pShares[i]);
+            qShareSum = qShareSum.add(qShares[i]);
+        }
 
         N = pShareSum.multiply(qShareSum);
 
-        hasN = true;
+
+        if (myIndex == 1)
+        {
+            for (int portNum : serverPortNums)
+            {
+                while (true)
+                {
+                    try
+                    {
+                        socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                        os = new ObjectOutputStream(socket.getOutputStream());
+                        is = new ObjectInputStream(socket.getInputStream());
+                        os.writeUTF("sendingGG");
+                        gg = Crypto.getGG(N, rand);
+                        os.writeUTF(gg.toString());
+                        os.flush();
+                        break;
+                    } catch (Exception e) { }
+                }
+            }
+        }
 
 
+
+        for (int portNum : serverPortNums)
+        {
+            while (true)
+            {
+                try
+                {
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    os.writeUTF("sendingQi");
+                    os.writeUTF(Integer.toString(myIndex - 1));
+                    os.writeUTF(Crypto.getQi(N, gg, pq, myIndex).toString());
+                    os.flush();
+
+                    break;
+
+                } catch (Exception e) { }
+            }
+        }
+        System.out.printf("N: %s iteration %d\n", N, iterationNum++);
+
+        for (int portNum : serverPortNums)
+        {
+            while (true)
+            {
+                try
+                {
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    os.writeUTF("advanceTurn");
+                    os.flush();
+
+                    break;
+                } catch (Exception e) {}
+            }
+        }
+
+        while (serverTurn != myIndex) {
+            Thread.sleep(1);
+        }
+
+
+
+        if (Crypto.isBiprimal(N, rand, Qi))
+            return;
+        else
+            genBiprimalN();
 
     }
 
@@ -138,8 +257,6 @@ public class Server
             String names[] = office.split(", ");
 
 
-
-
             officesAndVotes.get(names[0]); //the first after splitting is the office name
             candidate_counts[row] = new float[names.length - 1];
 
@@ -154,7 +271,6 @@ public class Server
 
                 //save the count for access by GUI
                 candidate_counts[row][i-1] = whole.floatValue();
-
 
                 remainder = decryptedOffice.mod(new BigInteger( Integer.toString( (int) Math.pow(totalVoters + 1, i - 1)) ));
 
@@ -243,7 +359,6 @@ class ClientComm implements Runnable
             while (Server.running)
             {
 
-
                 line = is.readUTF();
 
                 if (line.equals("getN"))  //send public key
@@ -251,8 +366,6 @@ class ClientComm implements Runnable
                     os.writeUTF(Server.N.toString());
 
                     os.flush();
-
-
                 }
 
                 else if (line.equals("getCandidates"))  //send candidates
@@ -281,7 +394,6 @@ class ClientComm implements Runnable
 
                     os.flush();
                 }
-
 
 
                 else if (line.equals("sendingBallot"))
@@ -334,50 +446,35 @@ class Listening implements Runnable {
 
                 line = is.readUTF();
 
-
                 if (line.equals("sendingPQ"))
                 {
-                    Server.pShareSum = Server.pShareSum.add(new BigInteger(is.readUTF()));
-                    Server.qShareSum = Server.qShareSum.add(new BigInteger(is.readUTF()));
-
-                    os.flush();
+                    int index = Integer.parseInt(is.readUTF());
+                    Server.pShares[index] = new BigInteger(is.readUTF());
+                    Server.qShares[index] = new BigInteger(is.readUTF());
                 }
+                else if (line.equals("sendingGG"))
+                {
+                    Server.gg = new BigInteger(is.readUTF());
+                }
+                else if (line.equals("sendingQi"))
+                {
+                    int index = Integer.parseInt(is.readUTF());
+                    Server.Qi[index] = new BigInteger(is.readUTF());
+                }
+
+                else if (line.equals("advanceTurn"))
+                {
+                    if (++Server.serverTurn == Server.numServers + 1)
+                        Server.serverTurn = 1;
+                }
+
                 else
                     System.out.printf("Unexpected message arrived at server: %s\n", line);
 
                 serverSocket.close();
             } catch (Exception e) {
-                System.out.printf("Server couldn't start connection. %s\n", e); }
+                System.out.printf("Server couldn't start connection. Wonder which line. %s\n", e); }
 
         }
     }
-}
-
-
-class Polynomial
-{
-    private final BigInteger a[];
-
-    public Polynomial(int degree, BigInteger intercept, int bitLength, Random rand)
-    {
-        a = new BigInteger[degree + 1];
-        a[0] = intercept;
-        for (int i = 1; i < degree + 1; i++) {
-            a[i] = new BigInteger(bitLength, rand);
-        }
-    }
-
-    public BigInteger getValueAt(int x)
-    {
-        BigInteger rv = a[0];
-
-        for (int i = 1; i < a.length; i++)
-        {
-            rv = rv.add(a[i].multiply(new BigInteger(Integer.toString((int) Math.pow(x, i)))));
-        }
-
-        return rv;
-    }
-
-
 }
