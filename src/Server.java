@@ -21,7 +21,7 @@ public class Server
     public static ArrayList<String> CandidateNames = new ArrayList<>();
     public static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
     public static boolean hasN = false;
-    public static int bitLength = 16;
+    public static int bitLength = 128;
     public static  int myListeningPort;
     public static int serverPortNums[];
     public static int clientPortNums[];
@@ -39,12 +39,15 @@ public class Server
     public static BigInteger pShares[];
     public static BigInteger qShares[];
     public static BigInteger nShares[];
+    public static BigInteger thetaShares[];
     public static BigInteger gg;
     public static BigInteger Qi[];
     public static boolean myTurn = false;
     public static int nextServerPort;
     private static int iterationNum = 0;
     public static BigInteger delta;
+    private static BigInteger pShareSum;
+    private static BigInteger qShareSum;
 
     public static float candidate_counts[][];
 
@@ -93,6 +96,7 @@ public class Server
         pShares = new BigInteger[numServers];
         qShares = new BigInteger[numServers];
         nShares = new BigInteger[numServers];
+        thetaShares = new BigInteger[numServers];
         Qi = new BigInteger[numServers];
 
         readCandidatesFromFile(); //read the candidate file and load it into the array
@@ -101,21 +105,75 @@ public class Server
 
         genBiprimalN();
 
-        Thread.sleep(5000);
+
+        BigInteger message = new BigInteger("12345");
 
         System.out.printf("N: %s\n", N);
 
+        message = Crypto.encrypt(message, BigInteger.ONE, N);
 
         hasN = true;
 
+        Thread.sleep(500);
+
+        shareDecryptionKey();
+
+        System.out.printf("Theta: %s\n", theta);
+
+        System.out.printf("Message: %s\n", Crypto.decrypt(message, N, theta));
+
+    }
+
+    private static void shareDecryptionKey() throws Exception
+    {
+        BigInteger myTheta = N.add(BigInteger.ONE).subtract(pShareSum).subtract(qShareSum);
+
+        Polynomial thetaSharing = new Polynomial(2, myTheta, bitLength, rand);
+
+        while (!myTurn) { Thread.sleep(5); }
+
+        for (int i = 0; i < numServers; i ++)
+        {
+            while (true)
+            {
+                try
+                {
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPortNums[i]);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    os.writeUTF("sendingTheta");
+                    os.writeUTF(Integer.toString(myIndex - 1));
+                    os.writeUTF(thetaSharing.getValueAt(i + 1).toString());
+                    os.flush();
+
+                    break;
+                } catch (Exception e) {}
+            }
+        }
+
+        passTurn();
+
+        while (!myTurn) { Thread.sleep(5); }
+
+        BigInteger tmp[][] = new BigInteger[numServers][2];
+
+        for (int i = 0; i < tmp.length; i++)
+        {
+            tmp[i][0] = new BigInteger(Integer.toString( i + 1));
+            tmp[i][1] = thetaShares[i].multiply(delta);
+        }
+
+        passTurn();
+
+        theta = Crypto.lagrangeGetSecret(tmp).divide(delta);
     }
 
     public static void genBiprimalN() throws Exception
     {
         pq = Crypto.genPQ(myIndex, bitLength, rand);
 
-        Polynomial pSharing = Polynomial.generateShamirPSharings(3, pq[0], bitLength, rand);
-        Polynomial qSharing = Polynomial.generateShamirPSharings(3, pq[1], bitLength, rand);
+        Polynomial pSharing = new Polynomial(2, pq[0], bitLength, rand);
+        Polynomial qSharing = new Polynomial(2, pq[1], bitLength, rand);
 
         while (!myTurn) { Thread.sleep(5); }
 
@@ -144,8 +202,8 @@ public class Server
         while (!myTurn) { Thread.sleep(5); }
 
 
-        BigInteger pShareSum = BigInteger.ZERO;
-        BigInteger qShareSum = BigInteger.ZERO;
+        pShareSum = BigInteger.ZERO;
+        qShareSum = BigInteger.ZERO;
 
         for (int i = 0; i < numServers; i++)
         {
@@ -242,12 +300,12 @@ public class Server
         if (!Crypto.isBiprimal(N, rand, Qi))
             genBiprimalN();
 
-        passTurn();
 
     }
 
     private static void passTurn()
     {
+        myTurn = false;
         while (true)
         {
             try
@@ -256,7 +314,7 @@ public class Server
                 os = new ObjectOutputStream(socket.getOutputStream());
                 is = new ObjectInputStream(socket.getInputStream());
                 os.writeUTF("yourTurn");
-                myTurn = false;
+
                 os.flush();
 
                 break;
@@ -501,6 +559,11 @@ class Listening implements Runnable {
                 {
                     int index = Integer.parseInt(is.readUTF());
                     Server.nShares[index] = new BigInteger(is.readUTF());
+                }
+                else if (line.equals("sendingTheta"))
+                {
+                    int index = Integer.parseInt(is.readUTF());
+                    Server.thetaShares[index] = new BigInteger(is.readUTF());
                 }
 
                 else if (line.equals("yourTurn"))

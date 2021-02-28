@@ -49,11 +49,8 @@ public class Crypto
         BigInteger Q1 = Qi[0];
         BigInteger ProductOfQiInverses = BigInteger.ONE;
 
-        System.out.printf("Q1 is %s\n", Qi[0]);
-
         for (int i = 1; i < Qi.length; i++)
         {
-            System.out.printf("Q%d is %s\n", i + 1, Qi[i]);
             ProductOfQiInverses = ProductOfQiInverses.multiply (Qi[i].modInverse(N));
         }
 
