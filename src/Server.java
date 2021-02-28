@@ -40,7 +40,8 @@ public class Server
     public static BigInteger qShares[];
     public static BigInteger gg;
     public static BigInteger Qi[];
-    public static int serverTurn = 1;
+    public static boolean myTurn = false;
+    public static int nextServerPort;
     private static int iterationNum = 0;
 
     public static float candidate_counts[][];
@@ -55,16 +56,29 @@ public class Server
         myIndex = Integer.parseInt(args[0]);
         numServers = Integer.parseInt(args[1]);
 
-        myListeningPort = Integer.parseInt(args[2]);
 
 
-        executor.execute(new Listening());
+        if (myIndex == 1)
+            myTurn = true;
+
+
+
 
         serverPortNums = new int[numServers];
         for (int i = 2; i < 2 + numServers; i++)
         {
             serverPortNums[i-2] = Integer.parseInt(args[i]);
         }
+
+        myListeningPort = serverPortNums[myIndex - 1];
+
+        executor.execute(new Listening());
+
+        if (myIndex == numServers)
+            nextServerPort = serverPortNums[0];
+        else
+            nextServerPort = serverPortNums[myIndex];
+
 
         numClients = Integer.parseInt(args[numServers + 2]);
         clientPortNums = new int[numClients];
@@ -97,7 +111,8 @@ public class Server
     {
         pq = Crypto.genPQ(myIndex, bitLength, rand);
 
-        while (serverTurn != myIndex) { Thread.sleep(1);
+        while (!myTurn) { Thread.sleep(50);
+        //System.out.printf("waiting 114\n");
         }
 
         for (int portNum : serverPortNums)
@@ -120,26 +135,27 @@ public class Server
             }
         }
 
-        for (int portNum : serverPortNums)
+
+        while (true)
         {
-            while (true)
+            try
             {
-                try
-                {
-                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
-                    os = new ObjectOutputStream(socket.getOutputStream());
-                    is = new ObjectInputStream(socket.getInputStream());
-                    os.writeUTF("advanceTurn");
-                    os.flush();
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
+                os = new ObjectOutputStream(socket.getOutputStream());
+                is = new ObjectInputStream(socket.getInputStream());
+                os.writeUTF("yourTurn");
+                myTurn = false;
+                os.flush();
 
-                    break;
-                } catch (Exception e) {}
-            }
+                break;
+            } catch (Exception e) {}
         }
 
-        while (serverTurn != myIndex) {
-            Thread.sleep(1);
+
+        while (!myTurn) { Thread.sleep(50);
+            //System.out.printf("waiting 155\n");
         }
+
 
         BigInteger pShareSum = BigInteger.ZERO;
         BigInteger qShareSum = BigInteger.ZERO;
@@ -156,6 +172,7 @@ public class Server
 
         if (myIndex == 1)
         {
+            gg = Crypto.getGG(N, rand);
             for (int portNum : serverPortNums)
             {
                 while (true)
@@ -166,7 +183,7 @@ public class Server
                         os = new ObjectOutputStream(socket.getOutputStream());
                         is = new ObjectInputStream(socket.getInputStream());
                         os.writeUTF("sendingGG");
-                        gg = Crypto.getGG(N, rand);
+
                         os.writeUTF(gg.toString());
                         os.flush();
                         break;
@@ -174,7 +191,6 @@ public class Server
                 }
             }
         }
-
 
 
         for (int portNum : serverPortNums)
@@ -198,33 +214,46 @@ public class Server
         }
         System.out.printf("N: %s iteration %d\n", N, iterationNum++);
 
-        for (int portNum : serverPortNums)
+       while (true)
         {
-            while (true)
+            try
             {
-                try
-                {
-                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
-                    os = new ObjectOutputStream(socket.getOutputStream());
-                    is = new ObjectInputStream(socket.getInputStream());
-                    os.writeUTF("advanceTurn");
-                    os.flush();
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
+                os = new ObjectOutputStream(socket.getOutputStream());
+                is = new ObjectInputStream(socket.getInputStream());
+                os.writeUTF("yourTurn");
+                myTurn = false;
+                os.flush();
 
-                    break;
-                } catch (Exception e) {}
-            }
-        }
-
-        while (serverTurn != myIndex) {
-            Thread.sleep(1);
+                break;
+            } catch (Exception e) {}
         }
 
 
+        while (!myTurn) { Thread.sleep(50);
+            //System.out.printf("waiting 233\n");
+        }
 
-        if (Crypto.isBiprimal(N, rand, Qi))
-            return;
-        else
+
+
+
+        if (!Crypto.isBiprimal(N, rand, Qi))
             genBiprimalN();
+
+        while (true)
+        {
+            try
+            {
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), nextServerPort);
+                os = new ObjectOutputStream(socket.getOutputStream());
+                is = new ObjectInputStream(socket.getInputStream());
+                os.writeUTF("yourTurn");
+                myTurn = false;
+                os.flush();
+
+                break;
+            } catch (Exception e) {}
+        }
 
     }
 
@@ -462,10 +491,9 @@ class Listening implements Runnable {
                     Server.Qi[index] = new BigInteger(is.readUTF());
                 }
 
-                else if (line.equals("advanceTurn"))
+                else if (line.equals("yourTurn"))
                 {
-                    if (++Server.serverTurn == Server.numServers + 1)
-                        Server.serverTurn = 1;
+                    Server.myTurn = true;
                 }
 
                 else

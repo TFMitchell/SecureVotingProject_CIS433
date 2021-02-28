@@ -1,11 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Server on 671" type="Application" factoryName="Application">
+  <configuration default="false" name="Server on 1430" type="Application" factoryName="Application">
     <option name="ALTERNATIVE_JRE_PATH" value="1.8" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="Server" />
     <module name="SecureVotingProject_CIS433" />
-    <option name="PROGRAM_PARAMETERS" value="2 5 670 671 1340 1343 1430 1 1337" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/Server on 671" />
+    <option name="PROGRAM_PARAMETERS" value="5 5 670 671 1340 1343 1430 1 679" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/Server on 1430" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
