@@ -15,11 +15,11 @@ public class Crypto
     private static final BigInteger THREE = new BigInteger("3");
     private static final BigInteger FOUR = new BigInteger("4");
 
-    public static BigInteger[] genPQ(int myIndex, int rsaPrimesBitlength, Random rand)
+    public static BigInteger[] genPQ(int myIndex, int rsaPrimesBitlength, Random rand) //generate random P and Q values
     {
         BigInteger rv[] = new BigInteger[2];
 
-        if(myIndex == 1)
+        if(myIndex == 1) //the P and Q have special parameters for the party with the first index
         {
             do
             {
@@ -42,10 +42,8 @@ public class Crypto
         return rv;
     }
 
-    public static boolean isBiprimal(BigInteger N, Random rand, BigInteger Qi[])
+    public static boolean isBiprimal(BigInteger N, Random rand, BigInteger Qi[]) //tests to see if the N is biprimal (can be divided only by two prime numbers)
     {
-
-        //biprimality check on N
         BigInteger Q1 = Qi[0];
         BigInteger ProductOfQiInverses = BigInteger.ONE;
 
@@ -54,11 +52,10 @@ public class Crypto
             ProductOfQiInverses = ProductOfQiInverses.multiply (Qi[i].modInverse(N));
         }
 
-
         return Q1.multiply(ProductOfQiInverses).mod(N).equals(BigInteger.ONE.mod(N));
     }
 
-    public static BigInteger getGG(BigInteger N, Random rand)
+    public static BigInteger getGG(BigInteger N, Random rand) //generate a number the is coprime to N, called GG
     {
         BigInteger gg;
 
@@ -70,7 +67,7 @@ public class Crypto
         return gg;
     }
 
-    private static int Jacobi(BigInteger m, BigInteger n)
+    private static int Jacobi(BigInteger m, BigInteger n) //helper function for get GG. From java2s.com
     {
         BigInteger TWO = new BigInteger("2");
         BigInteger FOUR = TWO.add(TWO);
@@ -101,7 +98,7 @@ public class Crypto
         return tmp * rule6multiplier * rule8multiplier;
     }
 
-    public static BigInteger getQi(BigInteger Ncandidate, BigInteger gg, BigInteger pq[], int index)
+    public static BigInteger getQi(BigInteger Ncandidate, BigInteger gg, BigInteger pq[], int index) //Qi encodes p and q so that is can be used to find N's biprimality without revealing P and Q
     {
         if (index == 1)
             return gg.modPow(Ncandidate.add(BigInteger.ONE).subtract(pq[0]).subtract(pq[1]).divide(FOUR), Ncandidate);
@@ -109,11 +106,8 @@ public class Crypto
             return gg.modPow(pq[0].add(pq[1]).divide(FOUR), Ncandidate);
     }
 
-
-    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger N)
+    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger N) //encrypt a message
     {
-        //makes the return statement easier to understand to declare here
-
         BigInteger g = N.add(BigInteger.ONE);
         BigInteger nSquared = N.multiply(N);
 
@@ -122,8 +116,7 @@ public class Crypto
                 .mod(nSquared);
     }
 
-
-    public static BigInteger decrypt(BigInteger c, BigInteger N, BigInteger theta)
+    public static BigInteger decrypt(BigInteger c, BigInteger N, BigInteger theta) //decrypt a message
     {
         //makes the return statement easier to understand to declare here
 
@@ -154,13 +147,12 @@ public class Crypto
                     .mod(nSquared);
     }
 
-    public static BigInteger lagrangeGetSecret(BigInteger points[][])
+    public static BigInteger lagrangeGetSecret(BigInteger points[][])  //given a set of points x, y, returns the y intercept. Used to find secret in Shamir's Secret Sharing. Instpired by geeksforgeeks.com
     {
-        BigInteger result = BigInteger.ZERO; // Initialize result
+        BigInteger result = BigInteger.ZERO;
 
         for (int i = 0; i < points.length; i++)
         {
-            // Compute individual terms of above formula
             BigInteger term = points[i][1];
             for (int j = 0; j < points.length; j++)
             {
@@ -172,23 +164,19 @@ public class Crypto
                         .divide(points[i][0].subtract(points[j][0]));
             }
 
-            // Add current term to result
             result = result.add(term);
         }
 
         return result;
     }
 
-    public static BigInteger factorial(int N)
+    public static BigInteger factorial(int N) //make a Biginteger factorial
     {
-        // Initialize result
-        BigInteger f = BigInteger.ONE;
+        BigInteger rv = BigInteger.ONE;
 
-        // Multiply f with 2, 3, ...N
         for (int i = 2; i <= N; i++)
-            f = f.multiply(BigInteger.valueOf(i));
+            rv = rv.multiply(BigInteger.valueOf(i));
 
-        return f;
+        return rv;
     }
-
 }

@@ -20,54 +20,41 @@ public class Server
 {
     public static ArrayList<String> CandidateNames = new ArrayList<>();
     public static HashMap<String, BigInteger> officesAndVotes = new HashMap<>();
-    public static boolean hasN = false;
-    public static int bitLength = 128;
-    public static  int myListeningPort;
-    public static int serverPortNums[];
-    public static int clientPortNums[];
-    public static boolean running = true;
     public static HashMap<String, BigInteger> encryptedSubtotals; //keeps track of subtotals by office
-    public static Random rand = new Random();
-    public static int myIndex, numServers, numClients;
-    private static int totalVoters = 100;
-    public static int currentClientNum = 0;
-    public static BigInteger N, theta;
+
+    public static boolean hasN = false; //do we have an N value yet? used for communicating with client
+    public static boolean running = true; //running, used to shutdown listening thread
+    public static boolean myTurn = false; //ensures synchronization and eliminates race conditions
+
+    public static int bitLength = 32; //bitlength of p and q values
+    public static int myListeningPort; //the port this server listens on
+    public static int serverPortNums[]; //a list of all servers' ports
+    public static int clientPortNums[]; //a list of my clients' ports
+    private static int myIndex, numServers, numClients;
+    private static int totalVoters = 100; //this is used for encoding more than two candidates for each office (we mod by this^candidateNumber)
+    public static int currentClientNum = 0; //used for enumerating the clients, so they know which portNum to use
+    private static int nextServerPort; //the port of the server at the next index (or first index for last server)
+    private static int iterationNum = 0; //keeps track of how many iterations to find a biprimal N
+
+    private static Random rand = new Random();
+
     private static Socket socket;
     private static ObjectOutputStream os;
     private static ObjectInputStream is;
-    public static BigInteger pq[];
-    public static BigInteger pShares[];
-    public static BigInteger qShares[];
-    public static BigInteger nShares[];
-    public static BigInteger thetaShares[];
-    public static BigInteger gg;
-    public static BigInteger Qi[];
-    public static boolean myTurn = false;
-    public static int nextServerPort;
-    private static int iterationNum = 0;
-    public static BigInteger delta;
-    private static BigInteger pShareSum;
-    private static BigInteger qShareSum;
 
-    public static float candidate_counts[][];
+    public static BigInteger N, gg; //public key and coprime
+    private static BigInteger theta, delta; //decryption key and delta, which is numServers! (used because interpolation divides by numServers, numservers-1, ..., but needs to be integers
+    private static BigInteger pShareSum, qShareSum; //sums of p and q shares, to find the share of N, which can be revealed with lagrange interpolation
+    private static BigInteger pq[]; //p and q for this server
+    public static BigInteger pShares[], qShares[], nShares[], thetaShares[], Qi[]; //shares come from each of the Servers, including itself
+
+    public static float candidate_counts[][]; //this is used for displaying the results in the GUI
 
     public static void main(String args[]) throws Exception
     {
-
-        ServerGUI myGUI = new ServerGUI(); //set up the GUI
-        ExecutorService executor = Executors.newCachedThreadPool();
-
         //interpret parameters
         myIndex = Integer.parseInt(args[0]);
         numServers = Integer.parseInt(args[1]);
-        delta = Crypto.factorial(numServers);
-
-
-        if (myIndex == 1)
-            myTurn = true;
-
-
-
 
         serverPortNums = new int[numServers];
         for (int i = 2; i < 2 + numServers; i++)
@@ -75,49 +62,49 @@ public class Server
             serverPortNums[i-2] = Integer.parseInt(args[i]);
         }
 
-        myListeningPort = serverPortNums[myIndex - 1];
-
-        executor.execute(new Listening());
-
-        if (myIndex == numServers)
-            nextServerPort = serverPortNums[0];
-        else
-            nextServerPort = serverPortNums[myIndex];
-
-
         numClients = Integer.parseInt(args[numServers + 2]);
         clientPortNums = new int[numClients];
+        ExecutorService executor = Executors.newCachedThreadPool();
         for (int i = numServers + 3; i < numServers + 3 + numClients; i++)
         {
             clientPortNums[i - numServers - 3] = Integer.parseInt(args[i]);
             executor.execute(new ClientComm());
         }
 
+        //setting up things we can now infer
+        myListeningPort = serverPortNums[myIndex - 1];
+        delta = Crypto.factorial(numServers);
         pShares = new BigInteger[numServers];
         qShares = new BigInteger[numServers];
         nShares = new BigInteger[numServers];
         thetaShares = new BigInteger[numServers];
         Qi = new BigInteger[numServers];
 
+        if (myIndex == 1)
+            myTurn = true;
+
+        if (myIndex == numServers)
+            nextServerPort = serverPortNums[0];
+        else
+            nextServerPort = serverPortNums[myIndex];
+
+        ServerGUI myGUI = new ServerGUI(); //set up the GUI
+        executor.execute(new Listening()); //listening port on its own thread
+
         readCandidatesFromFile(); //read the candidate file and load it into the array
         retreiveKeysFromFile();
         readFile();
 
-        genBiprimalN();
-
-
-        BigInteger message = new BigInteger("12345");
-
+        genBiprimalN(); //try to make an N
         System.out.printf("N: %s\n", N);
 
-        message = Crypto.encrypt(message, BigInteger.ONE, N);
+        BigInteger message = new BigInteger("12345"); //sample encrypted message
+        message = Crypto.encrypt(message, BigInteger.ONE, N); //there would be a real random Bigint here
+        message = Crypto.addEncrypted(message, message, N); //testing out the add functionality
 
-        hasN = true;
+        hasN = true; //we were able to make an N, so we note that for when clients ask
 
-        Thread.sleep(500);
-
-        shareDecryptionKey();
-
+        shareDecryptionKey(); //time to reveal the decryption key theta
         System.out.printf("Theta: %s\n", theta);
 
         System.out.printf("Message: %s\n", Crypto.decrypt(message, N, theta));
@@ -126,13 +113,13 @@ public class Server
 
     private static void shareDecryptionKey() throws Exception
     {
-        BigInteger myTheta = N.add(BigInteger.ONE).subtract(pShareSum).subtract(qShareSum);
+        BigInteger myTheta = N.add(BigInteger.ONE).subtract(pShareSum).subtract(qShareSum); //my share of theta
 
-        Polynomial thetaSharing = new Polynomial(2, myTheta, bitLength, rand);
+        Polynomial thetaSharing = new Polynomial(2, myTheta, bitLength, rand); //polynomial to share my share
 
         while (!myTurn) { Thread.sleep(5); }
 
-        for (int i = 0; i < numServers; i ++)
+        for (int i = 0; i < numServers; i ++) //send the appropriate share to each server
         {
             while (true)
             {
@@ -152,32 +139,32 @@ public class Server
         }
 
         passTurn();
-
         while (!myTurn) { Thread.sleep(5); }
 
+        //adding points to a Biginteger[][] for the lagrange function
         BigInteger tmp[][] = new BigInteger[numServers][2];
-
         for (int i = 0; i < tmp.length; i++)
         {
             tmp[i][0] = new BigInteger(Integer.toString( i + 1));
-            tmp[i][1] = thetaShares[i].multiply(delta);
+            tmp[i][1] = thetaShares[i].multiply(delta); //multiply by delta to prevent decimals
         }
 
-        passTurn();
-
         theta = Crypto.lagrangeGetSecret(tmp).divide(delta);
+
+        passTurn();
     }
 
     public static void genBiprimalN() throws Exception
     {
-        pq = Crypto.genPQ(myIndex, bitLength, rand);
+        pq = Crypto.genPQ(myIndex, bitLength, rand); //p and q
 
+        //make a polynomial each to share p and q
         Polynomial pSharing = new Polynomial(2, pq[0], bitLength, rand);
         Polynomial qSharing = new Polynomial(2, pq[1], bitLength, rand);
 
         while (!myTurn) { Thread.sleep(5); }
 
-        for (int i = 0; i < numServers; i ++)//(int portNum : serverPortNums)
+        for (int i = 0; i < numServers; i ++) //send the right share of p and q to each server
         {
             while (true)
             {
@@ -198,22 +185,19 @@ public class Server
         }
 
         passTurn();
-
         while (!myTurn) { Thread.sleep(5); }
 
-
+        //add all the shares together to make a share of N Ni
         pShareSum = BigInteger.ZERO;
         qShareSum = BigInteger.ZERO;
-
         for (int i = 0; i < numServers; i++)
         {
             pShareSum = pShareSum.add(pShares[i]);
             qShareSum = qShareSum.add(qShares[i]);
         }
-
         BigInteger Ni = pShareSum.multiply(qShareSum);
 
-        for (int portNum : serverPortNums)
+        for (int portNum : serverPortNums) //send the right share of Ni to each server
         {
             while (true)
             {
@@ -234,25 +218,22 @@ public class Server
         }
 
         passTurn();
-
-
         while (!myTurn) { Thread.sleep(5); }
 
+        //get ready to plug the sum of all Ni's into the secret finder
         BigInteger tmp[][] = new BigInteger[numServers][2];
-
         for (int i = 0; i < tmp.length; i++)
         {
             tmp[i][0] = new BigInteger(Integer.toString( i + 1));
             tmp[i][1] = nShares[i].multiply(delta);
 
         }
+        N = Crypto.lagrangeGetSecret(tmp).divide(delta); //find N
 
-        N = Crypto.lagrangeGetSecret(tmp).divide(delta);
-
-        if (myIndex == 1) //one of them has to choose a gg
+        if (myIndex == 1) //server index one has to choose a gg
         {
             gg = Crypto.getGG(N, rand);
-            for (int portNum : serverPortNums)
+            for (int portNum : serverPortNums) //then share it with others
             {
                 while (true)
                 {
@@ -262,7 +243,6 @@ public class Server
                         os = new ObjectOutputStream(socket.getOutputStream());
                         is = new ObjectInputStream(socket.getInputStream());
                         os.writeUTF("sendingGG");
-
                         os.writeUTF(gg.toString());
                         os.flush();
                         break;
@@ -271,8 +251,7 @@ public class Server
             }
         }
 
-
-        for (int portNum : serverPortNums)
+        for (int portNum : serverPortNums) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
         {
             while (true)
             {
@@ -291,19 +270,18 @@ public class Server
                 } catch (Exception e) { }
             }
         }
-        System.out.printf("N: %s iteration %d\n", N, iterationNum++);
 
-       passTurn();
+        System.out.printf("N: %s iteration %d\n", N, iterationNum++); //something to watch in the terminal
 
+        passTurn();
         while (!myTurn) { Thread.sleep(5); }
 
-        if (!Crypto.isBiprimal(N, rand, Qi))
+        if (!Crypto.isBiprimal(N, rand, Qi)) //N wasn't biprimal, try again
             genBiprimalN();
-
 
     }
 
-    private static void passTurn()
+    private static void passTurn() //pass turn to next server in series
     {
         myTurn = false;
         while (true)
@@ -324,7 +302,7 @@ public class Server
 
 
     //file handler for candidate list
-    public static void readCandidatesFromFile() throws Exception
+    private static void readCandidatesFromFile() throws Exception
     {
         File file = new File("candidate_list.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
@@ -373,7 +351,7 @@ public class Server
         }
     }
 
-    public static void retreiveKeysFromFile() throws Exception
+    private static void retreiveKeysFromFile() throws Exception //read the keys from file
     {
         File file = new File("serverKeys.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
@@ -391,6 +369,7 @@ public class Server
 
         hasN = true;
     }
+
     //reads existing subtotals from the appropriately-named file in the working directory
     private static void readFile() throws Exception
     {
@@ -431,12 +410,10 @@ public class Server
 
         file.close();
     }
-
 }
 
-class ClientComm implements Runnable
+class ClientComm implements Runnable //one of these listener threads for each client
 {
-
     public void run()
     {
         int myIndex = Server.currentClientNum++;
@@ -465,19 +442,15 @@ class ClientComm implements Runnable
                 else if (line.equals("getCandidates"))  //send candidates
                 {
 
-                    for (String name : Server.CandidateNames) {
+                    for (String name : Server.CandidateNames)
                         os.writeUTF(name);
-                    }
 
                     os.writeUTF("END"); //tells client that the list is done
-
                     os.flush();
-
                 }
 
                 else if (line.equals("haveKey?"))
                 {
-
                     if (!Server.hasN)
                         os.writeUTF("no");
                     else
@@ -485,10 +458,8 @@ class ClientComm implements Runnable
                         os.writeUTF("yes");
                         os.writeUTF(Integer.toString(Server.bitLength));
                     }
-
                     os.flush();
                 }
-
 
                 else if (line.equals("sendingBallot"))
                 {
@@ -507,26 +478,22 @@ class ClientComm implements Runnable
                     officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, Server.N); //add the new vote to it
 
                     Server.encryptedSubtotals.put(index, officeSubTotal); //update the hashmap
-
                 }
 
                 else
                     System.out.printf("Unexpected message arrived at server: %s\n", line);
 
-
             }
 
         }catch(Exception e) {System.out.printf("Server couldn't start connection. %s\n", e);}
-
-
     }
 }
 
-class Listening implements Runnable {
+class Listening implements Runnable //listener for other servers to use
+{
 
-    public void run() {
-
-
+    public void run()
+    {
         while (Server.running)
         {
             try
@@ -576,8 +543,7 @@ class Listening implements Runnable {
 
                 serverSocket.close();
             } catch (Exception e) {
-                System.out.printf("Server couldn't start connection. Wonder which line. %s\n", e); }
-
+                System.out.printf("Server couldn't start connection.\n"); }
         }
     }
 }
