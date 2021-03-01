@@ -14,6 +14,7 @@ import java.awt.event.*;
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import javax.swing.*;
 
@@ -24,6 +25,7 @@ public class ClientGUI
     public boolean ready;
     public boolean ended;
     public boolean counted;
+    public boolean approved;
     //public String accessible; //what should this be doing?
 
     public ClientGUI()
@@ -33,6 +35,8 @@ public class ClientGUI
         ended = false; //set after the process comes to an end
         counted = false; //set after the Client receives the votes
 
+        approved = false; //dummy for password checking
+
         //accessible = "";
 
         //Create the frame.
@@ -41,7 +45,7 @@ public class ClientGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        frame.setSize(715, 800);   //Size the frame.
+        frame.setSize(1250, 800);   //Size the frame.
 
         //select the first screen
         WelcomeScreen();
@@ -68,16 +72,17 @@ public class ClientGUI
         //Exit when closed.
         //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+
         //Welcome screen instructions
         JLabel instructions = new JLabel("Welcome! Please Select Your Language", SwingConstants.LEFT);
-        instructions.setBounds(130,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
         frame.getContentPane().add(instructions);
 
         //single language option, English
         JButton b = new JButton("English Ballot");
-        b.setBounds(100,150,200, 70);
-        b.setFont(new Font("Tacoma",Font.PLAIN, 18));
+        b.setBounds(250,150,270, 90);
+        b.setFont(new Font("Tacoma",Font.PLAIN, 22));
         frame.getContentPane().add(b);
 
         //JButton b2=new JButton("Spanish Ballot");
@@ -93,8 +98,6 @@ public class ClientGUI
         //what does this section do?
         JLabel label1 = new JLabel();
         label1.setBounds(10, 210, 200, 100);
-        frame.getContentPane().add(label1);
-
 
         //once English is clicked, go to VoteScreen (method below this one)
         b.addActionListener(new ActionListener() {
@@ -118,6 +121,67 @@ public class ClientGUI
         frame.setVisible(true);
     }
 
+
+    //Meant for users to enter their pre-assigned password for identification
+    public void PasswordScreen() {
+
+        frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
+
+        //Exit when closed.
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+
+        //Welcome screen instructions
+        JLabel instructions = new JLabel("Enter your Secure Voting Password", SwingConstants.LEFT);
+        instructions.setBounds(400,80,500, 40);
+        instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
+        frame.getContentPane().add(instructions);
+
+
+        JPasswordField pass = new JPasswordField(40);
+        pass.setBounds(340,200,500, 40);
+        pass.setFont(new Font("Tacoma",Font.BOLD, 24));
+        frame.getContentPane().add(pass);
+        //pass.setText("password");
+
+
+        //single language option, English
+        JButton cb = new JButton("Confirm");
+        cb.setBounds(400, 650, 180, 50);
+        cb.setFont(new Font("Tacoma", Font.BOLD, 18));
+        frame.getContentPane().add(cb);
+
+
+
+        //once English is clicked, go to VoteScreen (method below this one)
+        cb.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                char[] password = pass.getPassword();
+                char[] correctPass = new char[] {'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
+
+                if(Arrays.equals(password, correctPass)){
+                    int nothingSelected[] = new int[Client.officesAndCandidates.size()]; //the voting screen should be default have nothing selected, but takes selection as an argument, so we need to make an empty selection
+
+                    VoteScreen(nothingSelected); //actual voting screen
+                }
+
+                /**for (int i = 0; i < nothingSelected.length; i++) {
+                 nothingSelected[i] = 0;
+                 }**/
+
+            }
+        });
+
+
+        //frame.setSize(715, 800); //Size the frame.
+
+        //Show it.
+        frame.setVisible(true);
+    }
+
     //second Screen. Choose from the available candidates.
     public void VoteScreen(int selected[]){
         //frame.removeAll();
@@ -130,7 +194,7 @@ public class ClientGUI
 
         //instructions
         JLabel instructions = new JLabel("Choose a candidate from each position", SwingConstants.LEFT);
-        instructions.setBounds(150,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
         frame.getContentPane().add(instructions);
 
@@ -153,7 +217,7 @@ public class ClientGUI
             {
                 //add their name to the radio options
                 options[i][n] = new JRadioButton(candidate);
-                options[i][n].setBounds(100 + 275 * n, 180 + 100 * i, 150, 40);
+                options[i][n].setBounds(100 + 225 * n, 180 + 100 * i, 150, 40);
                 options[i][n].setFont(new Font("Tacoma", Font.PLAIN, 16));
                 group.add(options[i][n]);
                 frame.getContentPane().add(options[i][n]);
@@ -226,7 +290,7 @@ public class ClientGUI
 
         //instructions for this page
         JLabel instructions = new JLabel("Please review the information before Submitting", SwingConstants.LEFT);
-        instructions.setBounds(130,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
         frame.getContentPane().add(instructions);
 
@@ -310,7 +374,7 @@ public class ClientGUI
         frame.setLayout(null);
 
         JLabel instructions = new JLabel("Please Wait While your Vote is Confirmed", SwingConstants.CENTER);
-        instructions.setBounds(100,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
         frame.getContentPane().add(instructions);
 
@@ -360,11 +424,11 @@ public class ClientGUI
 
 
         JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
-        instructions.setBounds(100,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
 
         JLabel instructions2 = new JLabel("Receipt is printing...", SwingConstants.CENTER);
-        instructions2.setBounds(100,150,500, 40);
+        instructions2.setBounds(400,150,500, 40);
         instructions2.setFont(new Font("Tacoma",Font.PLAIN, 20));
 
         JLabel instructions3 = new JLabel("Please Leave the voting area", SwingConstants.CENTER);

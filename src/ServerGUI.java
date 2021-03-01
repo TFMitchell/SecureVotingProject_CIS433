@@ -35,7 +35,7 @@ public class ServerGUI
         TotalScreen();
 
         frame.setLayout(null);
-        frame.setSize(715, 800);
+        frame.setSize(1250, 800);
 
         //Size the frame.
 
@@ -45,8 +45,50 @@ public class ServerGUI
         frame.setVisible(true);
     }
 
+    //who exactly is pressing the button here? I'm confused
+    public void PressScreen() {
+
+        frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
+
+        //Exit when closed.
+        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+
+        //Welcome screen instructions
+        JLabel instructions = new JLabel("Server Key Request", SwingConstants.LEFT);
+        instructions.setBounds(400,80,500, 40);
+        instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
+        frame.getContentPane().add(instructions);
+
+        //single language option, English
+        JButton b = new JButton("Request Key");
+        b.setBounds(250,150,270, 90);
+        b.setFont(new Font("Tacoma",Font.PLAIN, 22));
+        frame.getContentPane().add(b);
+
+
+        //I'm not sure what else this does besides requesting a key
+        b.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                //Server.shareDecryptionKey();
+                //I need this to be public, or am I not using this method
+            }
+        });
+
+
+        //frame.setSize(715, 800); //Size the frame.
+
+        //Show it.
+        frame.setVisible(true);
+    }
+
+
+
     //lists all votes recieved with their 'name' and the encoded vote
-    //non-functional, static labels
+    //non-functional, static label
     public void ListScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 
@@ -54,7 +96,7 @@ public class ServerGUI
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel instructions = new JLabel("Encoded Vote Lookup", SwingConstants.CENTER);
-        instructions.setBounds(100,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
 
         JLabel title1 = new JLabel("Vote ID", SwingConstants.CENTER);
@@ -104,8 +146,7 @@ public class ServerGUI
         frame.setVisible(true);
     }
 
-    //lists the current totals
-    //non-functional, static numbers
+    //lists the current totals of vote counts
     public void TotalScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 
@@ -113,7 +154,7 @@ public class ServerGUI
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel instructions = new JLabel("Voting Results", SwingConstants.CENTER);
-        instructions.setBounds(100,80,500, 40);
+        instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
 
         JLabel options[][] = new JLabel[Server.CandidateNames.size()][20];
@@ -142,14 +183,14 @@ public class ServerGUI
             {
                 //add the candidate names to labels
                 options[i][n - 1] = new JLabel(names[n], SwingConstants.LEFT);
-                options[i][n - 1].setBounds(100 + 275 * (n - 1), 180 + 150 * i, 150, 40);
+                options[i][n - 1].setBounds(100 + 225 * (n - 1), 180 + 150 * i, 150, 40);
                 options[i][n - 1].setFont(new Font("Tacoma", Font.PLAIN, 16));
 
                 //calculate the percentage and add to corresponding labels
                 double quick =  Server.candidate_counts[i][n-1]/total;
                 String temp = String.valueOf(quick).concat("%");
                 options[i][10 + n - 1] = new JLabel(temp, SwingConstants.LEFT);
-                options[i][10 + n - 1].setBounds(100 + 275 * (n - 1), 230 + 150 * i, 150, 40);
+                options[i][10 + n - 1].setBounds(100 + 225 * (n - 1), 230 + 150 * i, 150, 40);
                 options[i][10 + n - 1].setFont(new Font("Tacoma", Font.PLAIN, 16));
 
                 frame.getContentPane().add(options[i][n - 1]);
