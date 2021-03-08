@@ -45,14 +45,11 @@ public class ClientGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        frame.setSize(1250, 800);   //Size the frame.
+        frame.setSize(1000, 800); //Size the frame.
 
         //select the first screen
-        WelcomeScreen();
+        PasswordScreen();
 
-
-        //Show it.
-        frame.setVisible(true);
     }
 
     //I think we can just use the public method in Client instead
@@ -71,7 +68,6 @@ public class ClientGUI
 
         //Exit when closed.
         //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 
         //Welcome screen instructions
         JLabel instructions = new JLabel("Welcome! Please Select Your Language", SwingConstants.LEFT);
@@ -110,12 +106,11 @@ public class ClientGUI
                 /**for (int i = 0; i < nothingSelected.length; i++) {
                     nothingSelected[i] = 0;
                 }**/
-                VoteScreen(nothingSelected); //actual voting screen
+                PasswordScreen(); //prompt for password
             }
         });
 
 
-        //frame.setSize(715, 800); //Size the frame.
 
         //Show it.
         frame.setVisible(true);
@@ -152,7 +147,7 @@ public class ClientGUI
         cb.setFont(new Font("Tacoma", Font.BOLD, 18));
         frame.getContentPane().add(cb);
 
-
+        int nothingSelected[] = new int[Client.officesAndCandidates.size()]; //the voting screen should be default have nothing selected, but takes selection as an argument, so we need to make an empty selection
 
         //once English is clicked, go to VoteScreen (method below this one)
         cb.addActionListener(new ActionListener() {
@@ -163,23 +158,21 @@ public class ClientGUI
                 char[] correctPass = new char[] {'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
 
                 if(Arrays.equals(password, correctPass)){
-                    int nothingSelected[] = new int[Client.officesAndCandidates.size()]; //the voting screen should be default have nothing selected, but takes selection as an argument, so we need to make an empty selection
 
                     VoteScreen(nothingSelected); //actual voting screen
                 }
 
-                /**for (int i = 0; i < nothingSelected.length; i++) {
-                 nothingSelected[i] = 0;
-                 }**/
 
             }
         });
 
 
-        //frame.setSize(715, 800); //Size the frame.
-
-        //Show it.
         frame.setVisible(true);
+
+        try {Thread.sleep(20000);}
+        catch (Exception e) {}
+
+        VoteScreen(nothingSelected);
     }
 
     //second Screen. Choose from the available candidates.
@@ -264,15 +257,8 @@ public class ClientGUI
             }
         });
 
-        //frame.repaint();
-
-
-        //frame.setSize(715, 800);
-
         frame.setVisible(true);
-
     }
-
 
 
     //Third Screen. Used to confirm the correct candidates, or can reselect
@@ -283,10 +269,6 @@ public class ClientGUI
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
-
-        //Exit when closed.
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 
         //instructions for this page
         JLabel instructions = new JLabel("Please review the information before Submitting", SwingConstants.LEFT);
@@ -332,9 +314,6 @@ public class ClientGUI
         frame.getContentPane().add(cfrmB);
 
 
-        //frame.setSize(715, 800); //Size the frame.
-
-
         //go back and re-vote with selections used last time pre-selected
         mkChgsB.addActionListener(new ActionListener() {
 
@@ -355,7 +334,6 @@ public class ClientGUI
             }
         });
 
-        //frame.repaint();
         frame.setVisible(true);
 
     }
@@ -377,11 +355,6 @@ public class ClientGUI
         instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
         frame.getContentPane().add(instructions);
-
-        //Exit when closed.
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        //frame.setSize(715, 800);
 
         frame.setVisible(true);
 
@@ -419,9 +392,6 @@ public class ClientGUI
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
 
-        //Exit when closed.
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 
         JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
         instructions.setBounds(400,80,500, 40);
@@ -440,9 +410,7 @@ public class ClientGUI
 
         // are we showing the "receipt", the encryptedVote
         //I'm basing this on the numberfile video, with the idea the server lists all the receipts
-
-        //frame.setSize(715, 800);
-
+        //to Kevin: I don't really know. I think maybe we shouldn't because of the coercion argument.
 
         //Show it.
         frame.setVisible(true);

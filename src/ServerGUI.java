@@ -29,6 +29,8 @@ public class ServerGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        frame.setSize(715, 800); //Size the frame.
+
         //select the first screen
         PressScreen();
     }
@@ -39,9 +41,6 @@ public class ServerGUI
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
-
-        //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //Welcome screen instructions
         JLabel instructions = new JLabel("Server Key Request", SwingConstants.LEFT);
@@ -75,7 +74,7 @@ public class ServerGUI
 
         frame.setLayout(null);
 
-        frame.setSize(715, 800); //Size the frame.
+
 
         //Show it.
         frame.setVisible(true);
@@ -85,8 +84,6 @@ public class ServerGUI
     public void TotalScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 
-        //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel instructions = new JLabel("Voting Results", SwingConstants.CENTER);
         instructions.setBounds(400,80,500, 40);
@@ -151,7 +148,6 @@ public class ServerGUI
         frame.getContentPane().add(b);
 
         frame.setLayout(null);
-        frame.setSize(715, 800);
 
         frame.setVisible(true);
     }
@@ -163,8 +159,6 @@ public class ServerGUI
     public void ListScreen() {
         frame.setContentPane(new JPanel(new BorderLayout()));
 
-        //Exit when closed.
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JLabel instructions = new JLabel("Encoded Vote Lookup", SwingConstants.CENTER);
         instructions.setBounds(400,80,500, 40);
@@ -207,7 +201,6 @@ public class ServerGUI
         frame.getContentPane().add(b);
 
         frame.setLayout(null);
-        frame.setSize(715, 800);
 
         frame.setVisible(true);
     }

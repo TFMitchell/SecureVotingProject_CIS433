@@ -104,14 +104,13 @@ public class Server
         if (!readApprovedPinsFromFile()) //if file is empty, make new pins and write them
             generateAndWriteApprovedPinsToFile();
 
-        sharePinsWithPinAuth();
+        //sharePinsWithPinAuth();
 
         if (!hasN)
             genBiprimalN(); //try to make an N
 
         System.out.printf("N: %s\n", N);
         writeKeysToFile();
-
 
     }
 
