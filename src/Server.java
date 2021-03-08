@@ -314,6 +314,39 @@ public class Server
 
     }
 
+    public static boolean distributeAndCheckPassword(String password)
+    {
+        boolean rv = true;
+
+        for (int i = 0; i < numServers; i++) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
+        {
+            while (true)
+            {
+                try
+                {
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPortNums[i]);
+                    os = new ObjectOutputStream(socket.getOutputStream());
+                    is = new ObjectInputStream(socket.getInputStream());
+                    os.writeUTF("checkPartialPassword");
+                    os.writeUTF(password.substring(2*i, 2*i + 2));
+                    os.flush();
+
+                    if (is.readUTF().equals("no"))
+                    {
+                        rv = false;
+                    }
+
+                    break;
+
+                } catch (Exception e) {}
+            }
+            if (!rv)
+                break;
+        }
+
+        return rv;
+    }
+
     public static void shareDecryptionKey() throws Exception
     {
         BigInteger myTheta = N.add(BigInteger.ONE).subtract(pShareSum).subtract(qShareSum); //my share of theta
@@ -511,7 +544,7 @@ public class Server
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingBallot");
-                    os.writeUTF(Integer.toString(12));
+                    os.writeUTF(pin);
                     os.writeUTF(encryptedVote.toString());
                     os.writeUTF(index);
                     os.flush();
@@ -584,6 +617,15 @@ class ClientComm implements Runnable //one of these listener threads for each cl
 
                     Server.distributeBallot(pin, encryptedVote, index);
 
+                }
+
+                else if (line.equals("passwordCorrect?"))
+                {
+                    if (Server.distributeAndCheckPassword(is.readUTF()))
+                        os.writeUTF("yes");
+                    else
+                        os.writeUTF("no");
+                    os.flush();
                 }
 
                 else
@@ -667,6 +709,26 @@ class Listening implements Runnable //listener for other servers to use
                     Server.encryptedSubtotals.put(index, officeSubTotal); //update the hashmap
 
                     Server.writeResultsToFile();
+                }
+                else if (line.equals("checkPartialPassword"))
+                {
+                    String givenPassword = is.readUTF();
+                    boolean acceptable = false;
+
+                    for (String possiblePassword : Server.approvedPins)
+                    {
+                        if (givenPassword.equals(possiblePassword))
+                        {
+                            acceptable = true;
+                            break;
+                        }
+                    }
+                    if (acceptable)
+                        os.writeUTF("yes");
+                    else
+                        os.writeUTF("no");
+
+                    os.flush();
                 }
 
                 else

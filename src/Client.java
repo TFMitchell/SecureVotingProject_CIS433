@@ -17,9 +17,8 @@ import java.util.*;
 public class Client
 {
     public static int count = 0; //how many votes this voting machine has received
-    public String name = "poll1";
-    //iterating the name for the vote is     name_count
-
+    public String name = "poll1"; //iterating the name for the vote is     name_count
+    private static String password;
     private static BigInteger N, theta;
     private static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
@@ -83,7 +82,7 @@ public class Client
             BigInteger encryptedVote = Crypto.encrypt(biVote, r, N); //encrypt it
 
             os.writeUTF("sendingBallot");
-            os.writeUTF("123456789012");
+            os.writeUTF(password);
             os.writeUTF(encryptedVote.toString());
             os.writeUTF(entry.getKey());
             os.flush();
@@ -143,6 +142,25 @@ public class Client
         }
         totalVoters = Integer.parseInt(is.readUTF());
 
+    }
+
+    public static boolean testPassword(char passwordChars[]) throws Exception
+    {
+        password = "";
+
+        for (char letter : passwordChars)
+        {
+            password += letter;
+        }
+
+        os.writeUTF("passwordCorrect?");
+        os.writeUTF(password);
+        os.flush();
+
+        if (is.readUTF().equals("yes"))
+            return true;
+        else
+            return false;
     }
 
 

@@ -52,22 +52,12 @@ public class ClientGUI
 
     }
 
-    //I think we can just use the public method in Client instead
-    /**
-    //use this to set the list of candidates from the main program
-    public void setCandidates(ArrayList<String> newList) {
-        candidates = newList;
-
-    }**/
-
     //Initial Screen. Used to select Language (only english currently)
     public void WelcomeScreen() {
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
 
-        //Exit when closed.
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //Welcome screen instructions
         JLabel instructions = new JLabel("Welcome! Please Select Your Language", SwingConstants.LEFT);
@@ -123,9 +113,6 @@ public class ClientGUI
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
 
-        //Exit when closed.
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 
         //Welcome screen instructions
         JLabel instructions = new JLabel("Enter your Secure Voting Password", SwingConstants.LEFT);
@@ -155,35 +142,28 @@ public class ClientGUI
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 char[] password = pass.getPassword();
-                char[] correctPass = new char[] {'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
 
-                if(Arrays.equals(password, correctPass)){
+                try {
 
-                    VoteScreen(nothingSelected); //actual voting screen
+                    if (Client.testPassword(password))
+                        VoteScreen(nothingSelected); //proceed
+                    else
+                        PasswordScreen(); //try again
                 }
-
+                catch (Exception e) {System.out.printf("Error on 153: %s\n", e);}
 
             }
         });
 
-
         frame.setVisible(true);
 
-        try {Thread.sleep(20000);}
-        catch (Exception e) {}
-
-        VoteScreen(nothingSelected);
     }
 
     //second Screen. Choose from the available candidates.
     public void VoteScreen(int selected[]){
-        //frame.removeAll();
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
-
-        //Exit when closed.
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         //instructions
         JLabel instructions = new JLabel("Choose a candidate from each position", SwingConstants.LEFT);
