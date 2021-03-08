@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 
 public class Server
 {
-    public static String approvedPins[];
+    public static String approvedPasswords[];
     public static ArrayList<String> CandidateNamesByOffice = new ArrayList<>(); //list of offices in this format <office>, <candidate1>, <candidate2>, etc
     public static HashMap<String, BigInteger> encryptedSubtotals; //each office has one set of votes, division/remainders are used to determine each candidate's totals
 
@@ -30,11 +30,11 @@ public class Server
     public static int serverPortNums[]; //a list of all servers' ports
     public static int clientPortNums[]; //a list of my clients' ports
     private static int myIndex, numServers, numClients;
-    public static int totalVoters; //this is used for encoding more than two candidates for each office (we mod by this^candidateNumber), as well as knowing how many pins to generate
+    public static int totalVoters; //this is used for encoding more than two candidates for each office (we mod by this^candidateNumber), as well as knowing how many passwords to generate
     public static int currentClientNum = 0; //used for enumerating the clients, so they know which portNum to use
     private static int nextServerPort; //the port of the server at the next index (or first index for last server)
     private static int iterationNum = 0; //keeps track of how many iterations to find a biprimal N
-    private static int pinAuthPort;
+    private static int passwordAuthPort;
 
     private static Random rand = new Random();
 
@@ -77,7 +77,7 @@ public class Server
             executor.execute(new ClientComm());
         }
 
-        pinAuthPort = Integer.parseInt(args[numServers + 3 + numClients]);
+        passwordAuthPort = Integer.parseInt(args[numServers + 3 + numClients]);
 
         totalVoters = Integer.parseInt(args[numServers + 4 + numClients]);
 
@@ -88,7 +88,7 @@ public class Server
         qShares = new BigInteger[numServers];
         nShares = new BigInteger[numServers];
         thetaShares = new BigInteger[numServers];
-        approvedPins = new String[totalVoters];
+        approvedPasswords = new String[totalVoters];
         Qi = new BigInteger[numServers];
 
         if (myIndex == 1)
@@ -101,10 +101,10 @@ public class Server
 
         executor.execute(new Listening()); //listening port on its own thread
 
-        if (!readApprovedPinsFromFile()) //if file is empty, make new pins and write them
-            generateAndWriteApprovedPinsToFile();
+        if (!readApprovedPasswordsFromFile()) //if file is empty, make new passwords and write them
+            generateAndWriteApprovedPasswordsToFile();
 
-        //sharePinsWithPinAuth();
+        sharePasswordsWithPasswordAuth();
 
         if (!hasN)
             genBiprimalN(); //try to make an N
@@ -114,21 +114,21 @@ public class Server
 
     }
 
-    private static void sharePinsWithPinAuth()
+    private static void sharePasswordsWithPasswordAuth()
     {
         while (true)
         {
             try
             {
-                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), pinAuthPort);
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), passwordAuthPort);
                 os = new ObjectOutputStream(socket.getOutputStream());
                 is = new ObjectInputStream(socket.getInputStream());
 
                 os.writeUTF(Integer.toString(myIndex));
 
-                for (String pin: approvedPins)
+                for (String password: approvedPasswords)
                 {
-                    os.writeUTF(pin);
+                    os.writeUTF(password);
                 }
 
                 os.flush();
@@ -138,9 +138,9 @@ public class Server
         }
     }
 
-    private static boolean readApprovedPinsFromFile() throws Exception
+    private static boolean readApprovedPasswordsFromFile() throws Exception
     {
-        File file = new File("approvedPins.txt");
+        File file = new File("approvedPasswords.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
 
@@ -152,26 +152,26 @@ public class Server
         int i = 0;
         do
         {
-            approvedPins[i++] = line;
+            approvedPasswords[i++] = line;
             line = br.readLine();
         } while (line != null);
 
         return true;
     }
 
-    private static void generateAndWriteApprovedPinsToFile() throws Exception
+    private static void generateAndWriteApprovedPasswordsToFile() throws Exception
     {
-        FileWriter file = new FileWriter("approvedPins.txt");
+        FileWriter file = new FileWriter("approvedPasswords.txt");
         String digits;
 
-        for (String pin : approvedPins)
+        for (String password : approvedPasswords)
         {
             digits = "";
             for (int i = 0; i < 2; i++)
             {
                 digits += Integer.toString(rand.nextInt(10));
             }
-            pin = digits;
+            password = digits;
             file.write(digits + "\n");
         }
 
@@ -532,7 +532,7 @@ public class Server
         file.close();
     }
 
-    public static void distributeBallot(String pin, BigInteger encryptedVote, String index)
+    public static void distributeBallot(String password, BigInteger encryptedVote, String index)
     {
         for (int portNum : serverPortNums) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
         {
@@ -544,7 +544,7 @@ public class Server
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingBallot");
-                    os.writeUTF(pin);
+                    os.writeUTF(password);
                     os.writeUTF(encryptedVote.toString());
                     os.writeUTF(index);
                     os.flush();
@@ -609,13 +609,13 @@ class ClientComm implements Runnable //one of these listener threads for each cl
                 else if (line.equals("sendingBallot"))
                 {
                     System.out.printf("Server updating from a client\n");
-                    String pin = is.readUTF();
+                    String password = is.readUTF();
 
                     BigInteger encryptedVote = new BigInteger(is.readUTF());
 
                     String index = is.readUTF();
 
-                    Server.distributeBallot(pin, encryptedVote, index);
+                    Server.distributeBallot(password, encryptedVote, index);
 
                 }
 
@@ -689,9 +689,9 @@ class Listening implements Runnable //listener for other servers to use
                     //get the subtotal for this particular office
                     BigInteger officeSubTotal;
 
-                    String myPin = is.readUTF();
+                    String myPassword = is.readUTF();
 
-                    //if myPin is correct
+                    //if myPassword is correct
 
                     BigInteger encryptedVote = new BigInteger(is.readUTF());
 
@@ -715,7 +715,7 @@ class Listening implements Runnable //listener for other servers to use
                     String givenPassword = is.readUTF();
                     boolean acceptable = false;
 
-                    for (String possiblePassword : Server.approvedPins)
+                    for (String possiblePassword : Server.approvedPasswords)
                     {
                         if (givenPassword.equals(possiblePassword))
                         {

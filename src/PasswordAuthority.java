@@ -1,5 +1,5 @@
 /**
- PinAuthority.java
+ PasswordAuthority.java
  Receives only pins from Servers and concatenates them into a composite pin a voter can use.
 
  Authors: Kevin Kincaid, Thomas Mitchell
@@ -7,18 +7,15 @@
 
 import java.io.*;
 import java.net.*;
-import java.math.*;
-import java.util.*;
 
-
-public class PinAuthority
+public class PasswordAuthority
 {
     public static void main(String args[]) throws Exception
     {
         int numServers = Integer.parseInt(args[0]);
         int listeningPort = Integer.parseInt(args[1]);
         int totalVoters = Integer.parseInt(args[2]);
-        String pins[][] = new String[totalVoters][numServers];
+        String passwords[][] = new String[totalVoters][numServers];
         boolean receivedAll = false;
 
         while (!receivedAll)
@@ -33,13 +30,13 @@ public class PinAuthority
 
                 int serverIndex = Integer.parseInt(is.readUTF());
 
-                for (String pin[] : pins) {
-                    pin[serverIndex - 1] = is.readUTF();
+                for (String password[] : passwords) {
+                    password[serverIndex - 1] = is.readUTF();
                 }
 
                 for (int i = 0; i < numServers; i++) {
                     receivedAll = true;
-                    if (pins[0][i] == null) {
+                    if (passwords[0][i] == null) {
                         receivedAll = false;
                         break;
                     }
@@ -48,13 +45,13 @@ public class PinAuthority
 
         }
 
-        FileWriter file = new FileWriter("compositePins.txt");
+        FileWriter file = new FileWriter("compositePasswords.txt");
 
-        for (String pin[] : pins)
+        for (String password[] : passwords)
         {
-            for (String partialPin : pin)
+            for (String partialPassword : password)
             {
-                file.write(partialPin);
+                file.write(partialPassword);
             }
             file.write("\n");
         }
