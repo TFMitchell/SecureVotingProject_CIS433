@@ -24,7 +24,6 @@ public class Client
     private static BigInteger N, theta;
     private static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
-    private static int bitLength;
     private static int portNum;
     private static Socket socket;
     private static ObjectOutputStream os;
@@ -50,8 +49,7 @@ public class Client
                 connected = true;
             } catch (Exception e){System.out.printf("Waiting on server...\n");};
         }
-
-        officesAndCandidates = getCandidates(); //getFromServer
+        getCandidates(); //getFromServer
 
         while(!isServerReadyToSupplyPK()) //wait until N can be supplied from server
         {
@@ -67,15 +65,15 @@ public class Client
     //current idea for function to call from the GUI
     public static void CastVote(int selected[]) throws Exception {
 
-        BigInteger r;
-        do {
-            r = new BigInteger(bitLength - 1, new Random()); //generate r
-        } while (r.gcd(N).signum() != 1);
-
-
         int i = 0; //keep track of which office
+        BigInteger r;
         for (HashMap.Entry<String, ArrayList<String>> entry : officesAndCandidates.entrySet())
         {
+
+            do {
+                r = new BigInteger(N.bitLength() - 1, new Random()); //generate r
+            } while (!r.gcd(N).equals(BigInteger.ONE));
+
             BigInteger biVote;
             if (selected[i] == 0)
                 biVote = new BigInteger("0");
@@ -83,9 +81,11 @@ public class Client
                 biVote = new BigInteger("1");
             else
                 biVote = new BigInteger(Integer.toString((int) Math.pow(totalVoters + 1, selected[i] - 1))); //convert the vote to how it should be encrypted for homomorphic encryption to work
+
             BigInteger encryptedVote = Crypto.encrypt(biVote, r, N); //encrypt it
 
             os.writeUTF("sendingBallot");
+            os.writeUTF("123456789012");
             os.writeUTF(encryptedVote.toString());
             os.writeUTF(entry.getKey());
             os.flush();
@@ -123,9 +123,9 @@ public class Client
     }
 
     //routine to get the candidate list from server
-    public static HashMap<String, ArrayList<String>> getCandidates() throws Exception
+    public static void getCandidates() throws Exception
     {
-        HashMap<String, ArrayList<String>> officesAndCandidates = new HashMap<>();
+        officesAndCandidates = new HashMap<>();
 
         //ask for candidates
         os.writeUTF("getCandidates");
@@ -144,7 +144,6 @@ public class Client
             line = is.readUTF(); //continue reading from file
         }
 
-        return officesAndCandidates;
     }
 
 
@@ -155,12 +154,9 @@ public class Client
         os.flush();
 
         if (is.readUTF().equals("yes"))
-        {
-            bitLength = Integer.parseInt(is.readUTF());
             return true;
-        }
-
-        return false;
+        else
+            return false;
     }
 
 }
