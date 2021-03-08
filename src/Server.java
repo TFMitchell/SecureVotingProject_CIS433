@@ -17,6 +17,7 @@ import java.util.concurrent.*;
 
 public class Server
 {
+    public static String approvedPins[];
     public static ArrayList<String> CandidateNamesByOffice = new ArrayList<>(); //list of offices in this format <office>, <candidate1>, <candidate2>, etc
     public static HashMap<String, BigInteger> encryptedSubtotals; //each office has one set of votes, division/remainders are used to determine each candidate's totals
 
@@ -29,10 +30,11 @@ public class Server
     public static int serverPortNums[]; //a list of all servers' ports
     public static int clientPortNums[]; //a list of my clients' ports
     private static int myIndex, numServers, numClients;
-    private static int totalVoters = 100; //this is used for encoding more than two candidates for each office (we mod by this^candidateNumber)
+    public static int totalVoters; //this is used for encoding more than two candidates for each office (we mod by this^candidateNumber), as well as knowing how many pins to generate
     public static int currentClientNum = 0; //used for enumerating the clients, so they know which portNum to use
     private static int nextServerPort; //the port of the server at the next index (or first index for last server)
     private static int iterationNum = 0; //keeps track of how many iterations to find a biprimal N
+    private static int pinAuthPort;
 
     private static Random rand = new Random();
 
@@ -46,11 +48,11 @@ public class Server
     private static BigInteger pq[] = new BigInteger[2]; //p and q for this server
     public static BigInteger pShares[], qShares[], nShares[], thetaShares[], Qi[]; //shares come from each of the Servers, including itself
 
+
     public static float candidate_counts[][]; //this is used for displaying the results in the GUI
 
     public static void main(String args[]) throws Exception
     {
-
         readCandidatesFromFile(); //read the candidate file and load it into the array
         readKeysFromFile();
         readResultsFromFile();
@@ -75,6 +77,10 @@ public class Server
             executor.execute(new ClientComm());
         }
 
+        pinAuthPort = Integer.parseInt(args[numServers + 3 + numClients]);
+
+        totalVoters = Integer.parseInt(args[numServers + 4 + numClients]);
+
         //setting up things we can now infer
         myListeningPort = serverPortNums[myIndex - 1];
         delta = Crypto.factorial(numServers);
@@ -82,6 +88,7 @@ public class Server
         qShares = new BigInteger[numServers];
         nShares = new BigInteger[numServers];
         thetaShares = new BigInteger[numServers];
+        approvedPins = new String[totalVoters];
         Qi = new BigInteger[numServers];
 
         if (myIndex == 1)
@@ -94,6 +101,11 @@ public class Server
 
         executor.execute(new Listening()); //listening port on its own thread
 
+        if (!readApprovedPinsFromFile()) //if file is empty, make new pins and write them
+            generateAndWriteApprovedPinsToFile();
+
+        sharePinsWithPinAuth();
+
         if (!hasN)
             genBiprimalN(); //try to make an N
 
@@ -103,12 +115,75 @@ public class Server
 
     }
 
+    private static void sharePinsWithPinAuth()
+    {
+        while (true)
+        {
+            try
+            {
+                socket = new Socket(InetAddress.getLocalHost().getHostAddress(), pinAuthPort);
+                os = new ObjectOutputStream(socket.getOutputStream());
+                is = new ObjectInputStream(socket.getInputStream());
+
+                os.writeUTF(Integer.toString(myIndex));
+
+                for (String pin: approvedPins)
+                {
+                    os.writeUTF(pin);
+                }
+
+                os.flush();
+
+                break;
+            } catch (Exception e) {}
+        }
+    }
+
+    private static boolean readApprovedPinsFromFile() throws Exception
+    {
+        File file = new File("approvedPins.txt");
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        String line;
+
+        //every line of the file is an office and its votes
+        line = br.readLine();
+        if (line == null)
+            return false;
+
+        int i = 0;
+        do
+        {
+            approvedPins[i++] = line;
+            line = br.readLine();
+        } while (line != null);
+
+        return true;
+    }
+
+    private static void generateAndWriteApprovedPinsToFile() throws Exception
+    {
+        FileWriter file = new FileWriter("approvedPins.txt");
+        String digits;
+
+        for (String pin : approvedPins)
+        {
+            digits = "";
+            for (int i = 0; i < 2; i++)
+            {
+                digits += Integer.toString(rand.nextInt(10));
+            }
+            pin = digits;
+            file.write(digits + "\n");
+        }
+
+        file.close();
+    }
+
     public static void genBiprimalN() throws Exception
     {
 
-        do {
-
-
+        do
+        {
             pq = Crypto.genPQ(myIndex, bitLength, rand); //p and q
 
             //make a polynomial each to share p and q
@@ -425,7 +500,7 @@ public class Server
         file.close();
     }
 
-    public static void distributeBallot(BigInteger pin, BigInteger encryptedVote, String index)
+    public static void distributeBallot(String pin, BigInteger encryptedVote, String index)
     {
         for (int portNum : serverPortNums) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
         {
@@ -483,7 +558,8 @@ class ClientComm implements Runnable //one of these listener threads for each cl
                     for (String name : Server.CandidateNamesByOffice)
                         os.writeUTF(name);
 
-                    os.writeUTF("END"); //tells client that the list is done
+                    os.writeUTF("Total Voters:"); //tells client to expect total voters now
+                    os.writeUTF(Integer.toString(Server.totalVoters));
                     os.flush();
                 }
 
@@ -501,7 +577,7 @@ class ClientComm implements Runnable //one of these listener threads for each cl
                 else if (line.equals("sendingBallot"))
                 {
                     System.out.printf("Server updating from a client\n");
-                    BigInteger pin = new BigInteger(is.readUTF());
+                    String pin = is.readUTF();
 
                     BigInteger encryptedVote = new BigInteger(is.readUTF());
 
@@ -530,12 +606,11 @@ class Listening implements Runnable //listener for other servers to use
             {
                 //getting ready to receive input
                 ServerSocket serverSocket = new ServerSocket(Server.myListeningPort);
-                String line;
                 Socket clientSocket = serverSocket.accept();
                 ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
                 ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
 
-                line = is.readUTF();
+                String line = is.readUTF();
 
                 if (line.equals("sendingPQ"))
                 {
@@ -573,7 +648,7 @@ class Listening implements Runnable //listener for other servers to use
                     //get the subtotal for this particular office
                     BigInteger officeSubTotal;
 
-                    BigInteger myPin = new BigInteger(is.readUTF());
+                    String myPin = is.readUTF();
 
                     //if myPin is correct
 

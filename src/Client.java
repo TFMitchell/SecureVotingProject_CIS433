@@ -10,7 +10,6 @@
  **/
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.*;
 import java.math.*;
 import java.util.*;
@@ -135,7 +134,7 @@ public class Client
         String line = is.readUTF();
 
         //continue reading from server until it sends special "END" message to signify end of list
-        while (!line.equals("END"))
+        while (!line.equals("Total Voters:"))
         {
             String splitLine[] = line.split(", "); //each line uses the following form: office, name1, name2  So we split on commas
             ArrayList<String> candidateList = new ArrayList<>(); //making an arraylist of candidates per office to eventually add to the hashmap entry
@@ -143,6 +142,7 @@ public class Client
             officesAndCandidates.put(splitLine[0],candidateList); //add the entry to the return value
             line = is.readUTF(); //continue reading from file
         }
+        totalVoters = Integer.parseInt(is.readUTF());
 
     }
 
