@@ -112,6 +112,8 @@ public class Server
         System.out.printf("N: %s\n", N);
         writeKeysToFile();
 
+        myGUI.PressScreen(); //is this the correct screen? or do we want the totalscreen to pop up after initialization
+
     }
 
     private static void sharePasswordsWithPasswordAuth()

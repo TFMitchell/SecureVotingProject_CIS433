@@ -29,11 +29,35 @@ public class ServerGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        frame.setSize(715, 800); //Size the frame.
+        frame.setSize(1200, 800); //Size the frame.
 
         //select the first screen
-        PressScreen();
+        InitialScreen();
     }
+
+
+    //displayed screen the system is set up
+    public void InitialScreen(){
+        frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
+
+
+
+
+        //Welcome screen instructions
+        JLabel instructions = new JLabel("Please wait while the system initializes", SwingConstants.LEFT);
+        instructions.setBounds(400,80,500, 40);
+        instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
+        frame.getContentPane().add(instructions);
+
+        JLabel instructions2 = new JLabel("Generating N and passwords", SwingConstants.LEFT);
+        instructions2.setBounds(450,150,500, 40);
+        instructions2.setFont(new Font("Tacoma",Font.PLAIN, 24));
+        frame.getContentPane().add(instructions2);
+
+        frame.setVisible(true);
+    }
+
 
     //who exactly is pressing the button here? I'm confused
     //to Kevin: the poll worker administrator will press the button to distribute the private key when the polls close
@@ -102,9 +126,10 @@ public class ServerGUI
             office.setFont(new Font("Tacoma", Font.PLAIN, 18));
             frame.getContentPane().add(office);
 
-            //calculate the total for the office
+            //calculate the total for the office <- doesn't this calculate the amount of people voting?
+            // I made a small error fix
             double total = 0.0;
-            for (int rapid = 0; rapid < Server.candidate_counts[i].length; rapid++)
+            for (int rapid = 1; rapid < Server.candidate_counts[i].length; rapid++)
             {
                 total += Server.candidate_counts[i][rapid];
             }

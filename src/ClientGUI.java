@@ -45,11 +45,30 @@ public class ClientGUI
         //Exit when closed.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        frame.setSize(1000, 800); //Size the frame.
+        frame.setSize(1200, 800); //Size the frame.
 
         //select the first screen
-        PasswordScreen();
+        InitialScreen();
 
+    }
+
+    //displayed screen the system is set up
+    public void InitialScreen(){
+        frame.setContentPane(new JPanel(new BorderLayout()));
+        frame.setLayout(null);
+
+
+
+
+        //Welcome screen instructions
+        JLabel instructions = new JLabel("Please wait while the system initializes", SwingConstants.LEFT);
+        instructions.setBounds(400,80,500, 40);
+        instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
+        frame.getContentPane().add(instructions);
+
+
+
+        frame.setVisible(true);
     }
 
     //Initial Screen. Used to select Language (only english currently)
@@ -96,7 +115,7 @@ public class ClientGUI
                 /**for (int i = 0; i < nothingSelected.length; i++) {
                     nothingSelected[i] = 0;
                 }**/
-                PasswordScreen(); //prompt for password
+                PasswordScreen(false); //prompt for password
             }
         });
 
@@ -108,7 +127,7 @@ public class ClientGUI
 
 
     //Meant for users to enter their pre-assigned password for identification
-    public void PasswordScreen() {
+    public void PasswordScreen(boolean failure) {
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
@@ -119,6 +138,14 @@ public class ClientGUI
         instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
         frame.getContentPane().add(instructions);
+
+        JLabel success = new JLabel("Password Incorrect: please try again", SwingConstants.LEFT);
+        success.setBounds(400,130,500, 40);
+        success.setFont(new Font("Tacoma",Font.BOLD, 24));
+        if(failure){
+            frame.getContentPane().add(success);
+        }
+
 
 
         JPasswordField pass = new JPasswordField(40);
@@ -148,7 +175,7 @@ public class ClientGUI
                     if (Client.testPassword(password))
                         VoteScreen(nothingSelected); //proceed
                     else
-                        PasswordScreen(); //try again
+                        PasswordScreen(true); //try again
                 }
                 catch (Exception e) {System.out.printf("Error on 153: %s\n", e);}
 

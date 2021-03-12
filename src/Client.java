@@ -33,7 +33,7 @@ public class Client
         portNum = Integer.parseInt(args[0]);
 
         boolean connected = false;
-
+        ClientGUI myGUI = new ClientGUI(); //set up the GUI
         while (!connected)
         {
             try
@@ -46,7 +46,7 @@ public class Client
             } catch (Exception e){System.out.printf("Waiting on server...\n");};
         }
         getCandidates(); //getFromServer
-        ClientGUI myGUI = new ClientGUI(); //set up the GUI
+        //ClientGUI myGUI = new ClientGUI(); //set up the GUI
 
         while(!isServerReadyToSupplyPK()) //wait until N can be supplied from server
         {
@@ -54,6 +54,8 @@ public class Client
         }
 
         getPK(); //get N from Server
+        myGUI.PasswordScreen(false);
+
 
         System.out.printf("N: %s\n", N);
 
