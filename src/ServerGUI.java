@@ -138,15 +138,13 @@ public class ServerGUI
             office.setFont(new Font("Tacoma", Font.PLAIN, 18));
             frame.getContentPane().add(office);
 
-            //calculate the total for the office <- doesn't this calculate the amount of people voting?
-            // I made a small error fix
             double total = 0.0;
-            for (int rapid = 1; rapid < Server.candidate_counts[i].length; rapid++)
+            for (int rapid = 0; rapid < Server.candidate_counts[i].length; rapid++)
             {
                 total += Server.candidate_counts[i][rapid];
+                System.out.printf("candidate count %s\n", Server.candidate_counts[i][rapid]);
             }
 
-            //int n = 0; //keep track of how many candidates for this office we've listed
             for (int n = names.length - 1; n > 0; n--) //for each candidate in this office
             {
                 //add the candidate names to labels
@@ -155,7 +153,7 @@ public class ServerGUI
                 options[i][n - 1].setFont(new Font("Tacoma", Font.PLAIN, 16));
 
                 //calculate the percentage and add to corresponding labels
-                double quick =  Server.candidate_counts[i][n-1]/total;
+                double quick =  Server.candidate_counts[i][n-1]/total*100;
                 String temp = String.valueOf(quick).concat("%");
                 options[i][10 + n - 1] = new JLabel(temp, SwingConstants.LEFT);
                 options[i][10 + n - 1].setBounds(100 + 225 * (n - 1), 230 + 150 * i, 150, 40);

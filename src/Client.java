@@ -46,7 +46,6 @@ public class Client
             } catch (Exception e){System.out.printf("Waiting on server...\n");};
         }
         getCandidates(); //getFromServer
-        //ClientGUI myGUI = new ClientGUI(); //set up the GUI
 
         while(!isServerReadyToSupplyPK()) //wait until n can be supplied from server
         {
@@ -54,7 +53,7 @@ public class Client
         }
 
         getPK(); //get n from Server
-        myGUI.PasswordScreen(false);
+        myGUI.WelcomeScreen();
 
     }
 
@@ -81,8 +80,7 @@ public class Client
 
             BigInteger encryptedVote = Crypto.encrypt(biVote, r, n); //encrypt it
 
-            os.writeUTF(entry.getKey() + " " + encryptedVote.toString());
-            os.flush();
+            os.writeUTF(entry.getKey() + ":" + encryptedVote.toString());
 
             count++; //increment the times this machine has been used
             i++;
@@ -90,6 +88,8 @@ public class Client
         os.writeUTF("END");
         os.flush();
 
+        if (is.readUTF().equals("counted"))
+            ClientGUI.counted = true;
     }
 
     //routine to get the public key from the server

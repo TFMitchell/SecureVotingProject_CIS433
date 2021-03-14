@@ -24,7 +24,7 @@ public class Server
     public static boolean hasN = false; //do we have an N value yet? used for communicating with client
     public static boolean myTurn = false; //ensures synchronization and eliminates race conditions
 
-    public static int bitLength = 16; //bitlength of p and q values
+    public static int bitLength = 50; //bitlength of p and q values
     public static int myListeningPort; //the port this server listens on
     public static int serverPortNums[]; //a list of all servers' ports
     public static int clientPortNums[]; //a list of my clients' ports
@@ -141,7 +141,7 @@ public class Server
         File file = new File("approvedPasswords.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
-        String splitLine[] = new String[2];
+        String splitLine[];
 
         //every line of the file is an office and its votes
         line = br.readLine();
@@ -165,6 +165,7 @@ public class Server
 
     private static void generateAndWriteApprovedPasswordsToFile() throws Exception
     {
+        String possibleChars = "abcdefghijklmnopqrstuvwxyz0123456789";
         String digits;
 
         for (int i = 0; i < totalVoters; i++)
@@ -174,7 +175,7 @@ public class Server
                 digits = "";
                 for (int j = 0; j < 3; j++)
                 {
-                    digits += Integer.toString(rand.nextInt(10));
+                    digits += possibleChars.charAt(rand.nextInt(possibleChars.length()));
                 }
             } while (approvedPasswords.get(digits) != null);
 
@@ -337,7 +338,7 @@ public class Server
     {
         boolean rv = true;
 
-        for (int i = 0; i < numServers; i++) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
+        for (int i = 0; i < numServers; i++)
         {
             while (true)
             {
@@ -347,7 +348,7 @@ public class Server
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("checkPartialPassword");
-                    os.writeUTF(password.substring(2*i, 2*i + 2));
+                    os.writeUTF(password.substring(3*i, 3*i + 3));
                     os.flush();
 
                     if (is.readUTF().equals("no"))
@@ -545,32 +546,38 @@ public class Server
         file.close();
     }
 
-    public static void distributeBallot(String password, HashMap<String, BigInteger> ballot)
+    public static boolean distributeBallot(String password, HashMap<String, BigInteger> ballot)
     {
-        for (int portNum : serverPortNums) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
+        boolean rv = true;
+
+        for (int i = 0; i < serverPortNums.length; i++) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
         {
             while (true)
             {
                 try
                 {
-                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), portNum);
+                    socket = new Socket(InetAddress.getLocalHost().getHostAddress(), serverPortNums[i]);
                     os = new ObjectOutputStream(socket.getOutputStream());
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingBallot");
-                    os.writeUTF(password);
+                    os.writeUTF(password.substring(3*i, 3*i + 3));
 
                     for (Map.Entry<String, BigInteger> officeResult : ballot.entrySet())
                     {
-                        os.writeUTF(officeResult.getKey() + " " + officeResult.getValue());
+                        os.writeUTF(officeResult.getKey() + ":" + officeResult.getValue());
                     }
                     os.writeUTF("END");
                     os.flush();
+
+                    if (is.readUTF().equals("error"))
+                        rv = false;
 
                     break;
 
                 } catch (Exception e) { }
             }
         }
+        return rv;
     }
 }
 
@@ -629,17 +636,18 @@ class ClientComm implements Runnable //one of these listener threads for each cl
                     String officeAndVote[];
                     HashMap<String, BigInteger> ballot = new HashMap<>();
 
-                    officeAndVote = is.readUTF().split(" ");
+                    officeAndVote = is.readUTF().split(":");
 
-                    while (officeAndVote[0] != null)
+                    while (!officeAndVote[0].equals("END"))
                     {
-                        officeAndVote = is.readUTF().split(" ");
-
                         ballot.put(officeAndVote[0], new BigInteger(officeAndVote[1]));
+                        officeAndVote = is.readUTF().split(":");
                     }
-
-                    Server.distributeBallot(password, ballot);
-
+                    if (Server.distributeBallot(password, ballot))
+                        os.writeUTF("counted");
+                    else
+                        os.writeUTF("error");
+                    os.flush();
                 }
 
                 else if (line.equals("passwordCorrect?"))
@@ -713,6 +721,7 @@ class Listening implements Runnable //listener for other servers to use
 
                     String myPassword = is.readUTF();
                     boolean passwordCorrect = false;
+                    System.out.printf("myPassword %s\n", myPassword);
 
                     for (String password : Server.approvedPasswords.keySet())
                     {
@@ -727,23 +736,29 @@ class Listening implements Runnable //listener for other servers to use
                         }
                     }
 
-                    String officeAndVote[] = is.readUTF().split(" ");
+                    String officeAndVote[] = is.readUTF().split(":");
 
-                    while (officeAndVote[0] != null) //continue reading, even if password is wrong
+                    while (!officeAndVote[0].equals("END")) //continue reading, even if password is wrong
                     {
-
                         if (Server.encryptedSubtotals.get(officeAndVote[0]) == null)
                             officeSubTotal = new BigInteger("0");
                         else
                             officeSubTotal = Server.encryptedSubtotals.get(officeAndVote[0]);
 
-
                         officeSubTotal = Crypto.addEncrypted(officeSubTotal, new BigInteger(officeAndVote[1]), Server.n); //add the new vote to subtotal
 
                         if (passwordCorrect)
                             Server.encryptedSubtotals.put(officeAndVote[0], officeSubTotal); //update the hashmap
+
+                        officeAndVote = is.readUTF().split(":");
                     }
 
+                    if (passwordCorrect)
+                        os.writeUTF("success");
+                    else
+                        os.writeUTF("error");
+
+                    os.flush();
                     Server.writeResultsToFile();
                 }
                 else if (line.equals("checkPartialPassword"))

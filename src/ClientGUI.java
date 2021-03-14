@@ -21,24 +21,10 @@ import javax.swing.*;
 public class ClientGUI
 {
     public JFrame frame;
-
-    public boolean ready;
-    public boolean ended;
-    public boolean counted;
-    public boolean approved;
-    //public String accessible; //what should this be doing?
+    public static boolean counted;
 
     public ClientGUI()
     {
-        //does not have a vote set yet
-        ready = false; //set after confirmation of votes
-        ended = false; //set after the process comes to an end
-        counted = false; //set after the Client receives the votes
-
-        approved = false; //dummy for password checking
-
-        //accessible = "";
-
         //Create the frame.
         frame = new JFrame("Secure Voting App");
 
@@ -57,16 +43,11 @@ public class ClientGUI
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
 
-
-
-
         //Welcome screen instructions
         JLabel instructions = new JLabel("Please wait while the system initializes", SwingConstants.LEFT);
         instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
         frame.getContentPane().add(instructions);
-
-
 
         frame.setVisible(true);
     }
@@ -76,7 +57,7 @@ public class ClientGUI
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
-
+        counted = false;
 
         //Welcome screen instructions
         JLabel instructions = new JLabel("Welcome! Please Select Your Language", SwingConstants.LEFT);
@@ -90,16 +71,6 @@ public class ClientGUI
         b.setFont(new Font("Tacoma",Font.PLAIN, 22));
         frame.getContentPane().add(b);
 
-        //JButton b2=new JButton("Spanish Ballot");
-        //b2.setBounds(400,150,200, 70);
-        //b2.setFont(new Font("Tacoma",Font.PLAIN, 18));
-        //frame.getContentPane().add(b2);
-
-        //JButton b3=new JButton("French Ballot");
-        //b3.setBounds(100,250,200, 70);
-        //b3.setFont(new Font("Tacoma",Font.PLAIN, 18));
-        //frame.getContentPane().add(b3);
-
         //what does this section do?
         JLabel label1 = new JLabel();
         label1.setBounds(10, 210, 200, 100);
@@ -112,16 +83,10 @@ public class ClientGUI
 
                 int nothingSelected[] = new int[Client.officesAndCandidates.size()]; //the voting screen should be default have nothing selected, but takes selection as an argument, so we need to make an empty selection
 
-                /**for (int i = 0; i < nothingSelected.length; i++) {
-                    nothingSelected[i] = 0;
-                }**/
                 PasswordScreen(false); //prompt for password
             }
         });
 
-
-
-        //Show it.
         frame.setVisible(true);
     }
 
@@ -131,7 +96,6 @@ public class ClientGUI
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
-
 
         //Welcome screen instructions
         JLabel instructions = new JLabel("Enter your Secure Voting Password", SwingConstants.LEFT);
@@ -147,15 +111,11 @@ public class ClientGUI
         }
 
 
-
         JPasswordField pass = new JPasswordField(40);
         pass.setBounds(340,200,500, 40);
         pass.setFont(new Font("Tacoma",Font.BOLD, 24));
         frame.getContentPane().add(pass);
-        //pass.setText("password");
 
-
-        //single language option, English
         JButton cb = new JButton("Confirm");
         cb.setBounds(400, 650, 180, 50);
         cb.setFont(new Font("Tacoma", Font.BOLD, 18));
@@ -163,9 +123,7 @@ public class ClientGUI
 
         int nothingSelected[] = new int[Client.officesAndCandidates.size()]; //the voting screen should be default have nothing selected, but takes selection as an argument, so we need to make an empty selection
 
-        //once English is clicked, go to VoteScreen (method below this one)
         cb.addActionListener(new ActionListener() {
-
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 char[] password = pass.getPassword();
@@ -183,7 +141,6 @@ public class ClientGUI
         });
 
         frame.setVisible(true);
-
     }
 
     //second Screen. Choose from the available candidates.
@@ -337,23 +294,14 @@ public class ClientGUI
             public void actionPerformed(ActionEvent arg0) {
                 try {Client.CastVote(selected);}
                 catch(Exception e) {}
-                WaitScreen(selected);
+                WaitScreen();
             }
         });
 
         frame.setVisible(true);
-
     }
 
-
-    public void WaitScreen(int selected[]){
-        //Ready = true is the signal to the client to get the vote from 'accessible'
-        //accessible = selected;
-        ready = true;
-
-        //I moved this because the idea with the wait screen was that it would repeatedly come up until the vote is counted
-        //If the vote is cast here it could be counted multiple times.
-        //Client.CastVote(selected);
+    public void WaitScreen(){
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
@@ -369,7 +317,7 @@ public class ClientGUI
         Timer delay = new Timer(3000, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Checkdone(selected);
+                Checkdone();
             }
         });
         delay.setRepeats(false);
@@ -377,28 +325,22 @@ public class ClientGUI
     }
 
     //if vote has been counted, exit, else circle back to waiting screen
-    public void Checkdone(int selected[]) {
+    public void Checkdone() {
 
-        counted = true; //TODO: should be set by the Client
-
-        if(counted == true){
+        if(counted){
             //the system sets counted == true after collecting and counting the vote
             ExitScreen();
         }else{
             //wait until client collects the vote
-            WaitScreen(selected);
+            WaitScreen();
         }
     }
 
     //final screen, display final messages
     public void ExitScreen() {
-        ready = false;
-        ended = true;
-        //in final version, should need the reset signal from the poll worker to restart
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
-
 
         JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
         instructions.setBounds(400,80,500, 40);
@@ -406,13 +348,21 @@ public class ClientGUI
         frame.getContentPane().add(instructions);
 
         JLabel instructions2 = new JLabel("Please Leave the voting area", SwingConstants.CENTER);
-        instructions2.setBounds(100,270,500, 40);
+        instructions2.setBounds(100,470,500, 40);
         instructions2.setFont(new Font("Tacoma",Font.PLAIN, 20));
         frame.getContentPane().add(instructions2);
 
-        //Show it.
         frame.setVisible(true);
 
+
+        Timer delay = new Timer(5000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                WelcomeScreen();
+            }
+        });
+        delay.setRepeats(false);
+        delay.start();
     }
 
 }
