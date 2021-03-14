@@ -5,6 +5,8 @@
 
  Authors: Kevin Kincaid, Thomas Mitchell
 
+ References: java2s.com, geeksforgeeks.com
+
  **/
 
 import java.math.*;
@@ -12,14 +14,16 @@ import java.util.*;
 
 public class Crypto
 {
+    //commonly used BigInts
     private static final BigInteger THREE = new BigInteger("3");
     private static final BigInteger FOUR = new BigInteger("4");
 
-    public static BigInteger[] genPQ(int myIndex, int rsaPrimesBitlength, Random rand) //generate random P and Q values
+    //generate random p and q values
+    public static BigInteger[] genPQ(int myIndex, int rsaPrimesBitlength, Random rand)
     {
         BigInteger rv[] = new BigInteger[2];
 
-        if(myIndex == 1) //the P and Q have special parameters for the party with the first index
+        if(myIndex == 1) //the p and q have special parameters for the party with the first index
         {
             do
             {
@@ -27,7 +31,6 @@ public class Crypto
                 rv[1] = new BigInteger(rsaPrimesBitlength, rand);
 
             } while (!rv[0].mod(FOUR).equals(THREE) || ! rv[1].mod(FOUR).equals(THREE));
-
         }
         else
         {
@@ -42,31 +45,35 @@ public class Crypto
         return rv;
     }
 
-    public static boolean isBiprimal(BigInteger N, Random rand, BigInteger Qi[]) //tests to see if the N is biprimal (can be divided only by two prime numbers)
+    //tests to see if the n candidate is biprimal (can be divided only by two prime numbers) using the Q shares
+    public static boolean isBiprimal(BigInteger n, Random rand, BigInteger Qi[])
     {
-        BigInteger Q1 = Qi[0];
+        BigInteger Q1 = Qi[0]; //making note of the share of Q from server 1
+
+        //get the product of all other Q shares' inverses
         BigInteger ProductOfQiInverses = BigInteger.ONE;
-
         for (int i = 1; i < Qi.length; i++)
-        {
-            ProductOfQiInverses = ProductOfQiInverses.multiply (Qi[i].modInverse(N));
-        }
+            ProductOfQiInverses = ProductOfQiInverses.multiply (Qi[i].modInverse(n));
 
-        return Q1.multiply(ProductOfQiInverses).mod(N).equals(BigInteger.ONE.mod(N));
+        //if Q1 times the product of other shares' inverses mod N is equal to 1
+        return Q1.multiply(ProductOfQiInverses).mod(n).equals(BigInteger.ONE);
     }
 
-    public static BigInteger getGG(BigInteger N, Random rand) //generate a number the is coprime to N, called GG
+    //generate a number that is coprime to N, called gg
+    public static BigInteger getGG(BigInteger n, Random rand)
     {
         BigInteger gg;
 
-        do {
-            gg = new BigInteger(N.bitCount(), rand);
-        } while (Jacobi(gg, N) != 1);
+        do
+        {
+            gg = new BigInteger(n.bitCount(), rand);
+        } while (Jacobi(gg, n) != 1); //using faster method for determining if gg and n are coprime
 
         return gg;
     }
 
-    private static int Jacobi(BigInteger m, BigInteger n) //helper function for get GG. From java2s.com
+    //helper function for determining Jacobi symbol of two BigInts. From java2s.com
+    private static int Jacobi(BigInteger m, BigInteger n)
     {
         BigInteger TWO = new BigInteger("2");
         BigInteger FOUR = TWO.add(TWO);
@@ -97,45 +104,46 @@ public class Crypto
         return tmp * rule6multiplier * rule8multiplier;
     }
 
-    public static BigInteger getQi(BigInteger Ncandidate, BigInteger gg, BigInteger pq[], int index) //Qi encodes p and q so that is can be used to find N's biprimality without revealing P and Q
+    //Qi encodes p and q so that is can be used to find n's biprimality without needing to reveal
+    public static BigInteger getQi(BigInteger n, BigInteger gg, BigInteger pq[], int index)
     {
         if (index == 1)
-            return gg.modPow(Ncandidate.add(BigInteger.ONE).subtract(pq[0]).subtract(pq[1]).divide(FOUR), Ncandidate);
+            return gg.modPow(n.add(BigInteger.ONE).subtract(pq[0]).subtract(pq[1]).divide(FOUR), n);
         else
-            return gg.modPow(pq[0].add(pq[1]).divide(FOUR), Ncandidate);
+            return gg.modPow(pq[0].add(pq[1]).divide(FOUR), n);
     }
 
-    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger N) //encrypt a message
+    //encrypt a message
+    public static BigInteger encrypt(BigInteger m, BigInteger r, BigInteger n)
     {
-        BigInteger g = N.add(BigInteger.ONE);
-        BigInteger nSquared = N.multiply(N);
+        BigInteger g = n.add(BigInteger.ONE);
+        BigInteger nSquared = n.multiply(n);
 
         return g.modPow(m, nSquared)
-                .multiply(r.modPow(N, nSquared))
+                .multiply(r.modPow(n, nSquared))
                 .mod(nSquared);
     }
 
-    public static BigInteger decrypt(BigInteger c, BigInteger N, BigInteger theta) //decrypt a message
+    //decrypt a message
+    public static BigInteger decrypt(BigInteger c, BigInteger n, BigInteger lambda)
     {
-        //makes the return statement easier to understand to declare here
-
-        BigInteger nSquared = N.multiply(N);
-        BigInteger u = N.add(BigInteger.ONE).modPow(theta, nSquared)
+        BigInteger nSquared = n.multiply(n);
+        BigInteger u = n.add(BigInteger.ONE).modPow(lambda, nSquared)
                 .subtract(BigInteger.ONE)
-                .divide(N)
-                .modInverse(N);
+                .divide(n)
+                .modInverse(n);
 
-        return c.modPow(theta, nSquared)
+        return c.modPow(lambda, nSquared)
                 .subtract(BigInteger.ONE)
-                .divide(N)
+                .divide(n)
                 .multiply(u)
-                .mod(N);
+                .mod(n);
     }
 
     //this adds two encrypted ciphertexts together
-    public static BigInteger addEncrypted(BigInteger one, BigInteger two, BigInteger N)
+    public static BigInteger addEncrypted(BigInteger one, BigInteger two, BigInteger n)
     {
-        BigInteger nSquared = N.multiply(N); //for simpler return statement
+        BigInteger nSquared = n.multiply(n); //for simpler return statement
 
         if (one.equals(BigInteger.ZERO))
             return two;
@@ -146,7 +154,8 @@ public class Crypto
                     .mod(nSquared);
     }
 
-    public static BigInteger lagrangeGetSecret(BigInteger points[][])  //given a set of points x, y, returns the y intercept. Used to find secret in Shamir's Secret Sharing. Instpired by geeksforgeeks.com
+    //given a set of points x, y, returns the y intercept. Used to find secret in Shamir's Secret Sharing. Instpired by geeksforgeeks.com
+    public static BigInteger lagrangeGetSecret(BigInteger points[][])
     {
         BigInteger result = BigInteger.ZERO;
 
@@ -158,7 +167,6 @@ public class Crypto
                 if (j == i) //would be division by zero
                     continue;
 
-
                 term = term.multiply(BigInteger.ZERO.subtract(points[j][0]))
                         .divide(points[i][0].subtract(points[j][0]));
             }
@@ -169,11 +177,12 @@ public class Crypto
         return result;
     }
 
-    public static BigInteger factorial(int N) //make a Biginteger factorial
+    //make a Biginteger factorial
+    public static BigInteger factorial(int n)
     {
         BigInteger rv = BigInteger.ONE;
 
-        for (int i = 2; i <= N; i++)
+        for (int i = 2; i <= n; i++)
             rv = rv.multiply(BigInteger.valueOf(i));
 
         return rv;
