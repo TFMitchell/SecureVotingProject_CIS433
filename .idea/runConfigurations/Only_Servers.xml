@@ -1,12 +1,10 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Only Servers" type="CompoundRunConfigurationType">
-    <toRun name="Server on 1340" type="Application" />
-    <toRun name="Server on 1430" type="Application" />
-    <toRun name="Server on 671" type="Application" />
-    <toRun name="Server on 1343" type="Application" />
-    <toRun name="Server on 670" type="Application" />
-    <toRun name="Server on 1432" type="Application" />
-    <toRun name="Server on 1431" type="Application" />
+    <toRun name="Server on 903" type="Application" />
+    <toRun name="Server on 901" type="Application" />
+    <toRun name="Server on 905" type="Application" />
+    <toRun name="Server on 904" type="Application" />
+    <toRun name="Server on 902" type="Application" />
     <method v="2" />
   </configuration>
 </component>

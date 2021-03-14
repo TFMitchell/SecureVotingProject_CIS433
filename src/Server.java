@@ -22,7 +22,7 @@ public class Server
     public static boolean hasN = false; //do we have an N value yet? used for communicating with client
     public static boolean myTurn = false; //ensures synchronization and eliminates race conditions
 
-    public static int bitLength = 45; //bitlength of p and q values. The n is a little more than twice this bitlength as it is pSum * qSum
+    public static int bitLength = 45; //bitlength of p and q values. The n is a little more than twice this bitlength as it is pSum * qSum. Set to a low value for quick testing
     public static int myListeningPort; //the port this server listens on for other servers
     public static int serverPortNums[]; //a list of all servers' ports
     public static int clientPortNums[]; //a list of my clients' ports
@@ -50,8 +50,6 @@ public class Server
     public static void main(String args[]) throws Exception //arguments are explained in the readme.md
     {
         readCandidatesFromFile(); //read the candidate file and load it into the array
-        readKeysFromFile(); //read the stored n, p, and q values into their variable
-        readResultsFromFile(); //read the stored encrypted results
         ServerGUI myGUI = new ServerGUI(); //set up the GUI
         ExecutorService executor = Executors.newCachedThreadPool(); //thread pool for listeners
 
@@ -86,6 +84,8 @@ public class Server
         //we also know these now
         myListeningPort = serverPortNums[myIndex - 1]; //the port that actually belongs to this server
         delta = Crypto.factorial(numServers); //delta is the factorial of numServers. This is used later for interpolation to avoid decimals
+        readKeysFromFile(); //read the stored n, p, and q values into their variable
+        readResultsFromFile(); //read the stored encrypted results
 
         //server index one starts out with the turn belonging to it
         if (myIndex == 1)
@@ -140,7 +140,7 @@ public class Server
     //read the stored voter password stubs into the approvedPasswords hashmap
     private static boolean readApprovedPasswordsFromFile() throws Exception
     {
-        File file = new File("approvedPasswords.txt");
+        File file = new File("approvedPasswords" + myIndex + ".txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
         String splitLine[];
@@ -193,7 +193,7 @@ public class Server
     //save approved password stubs and their statuses to disk from the hashmap
     public static void writeApprovedPasswordsToFile() throws Exception
     {
-        FileWriter file = new FileWriter("approvedPasswords.txt");
+        FileWriter file = new FileWriter("approvedPasswords" + myIndex + ".txt");
 
         for (Map.Entry<String, Boolean> passwordAndStatus : approvedPasswords.entrySet())
         {
@@ -509,7 +509,7 @@ public class Server
     //read the n, p, and q from file
     private static void readKeysFromFile() throws Exception
     {
-        File file = new File("serverKeys.txt");
+        File file = new File("serverKeys" + myIndex+ ".txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
 
@@ -530,7 +530,7 @@ public class Server
     //save N, p, and q to file
     private static void writeKeysToFile() throws Exception
     {
-        FileWriter file  = new FileWriter("serverKeys.txt");
+        FileWriter file  = new FileWriter("serverKeys" + myIndex + ".txt");
 
         file.write(n.toString() + "\n");
         file.write(pShareSum.toString() + "\n");
@@ -544,7 +544,7 @@ public class Server
     {
         encryptedSubtotals = new HashMap<>(); //fresh value for the class variable
 
-        File file = new File("encryptedSubtotals.txt");
+        File file = new File("encryptedSubtotals" + myIndex + ".txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
 
         String nameVotes[]; //[0]becomes a candidate's name and [1] is their encrypted subtotal
@@ -562,7 +562,7 @@ public class Server
     //writes to the subtotal file after the encryptedSubtotals hashmap is updated
     public static void writeResultsToFile() throws Exception
     {
-        FileWriter file = new FileWriter("encryptedSubtotals.txt");
+        FileWriter file = new FileWriter("encryptedSubtotals" + myIndex + ".txt");
 
         //for every office, write the key (office title) and its encrypted subtotal, separated by a colon
         for (HashMap.Entry<String, BigInteger> entry : encryptedSubtotals.entrySet())

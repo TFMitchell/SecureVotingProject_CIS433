@@ -5,7 +5,7 @@
     <option name="MAIN_CLASS_NAME" value="Server" />
     <module name="SecureVotingProject_CIS433" />
     <option name="PROGRAM_PARAMETERS" value="5 5 901 902 903 904 905 2 1005 1015 888 100" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/Server on 905" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/out/production/SecureVotingProject_CIS433" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
