@@ -41,6 +41,7 @@ public class PasswordAuthority
                         break;
                     }
                 }
+                serverSocket.close();
             } catch (Exception e) {}
 
         }

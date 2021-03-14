@@ -19,7 +19,7 @@ public class Client
     public static int count = 0; //how many votes this voting machine has received
     public String name = "poll1"; //iterating the name for the vote is     name_count
     private static String password;
-    private static BigInteger N, theta;
+    private static BigInteger n;
     private static int totalVoters = 100;
     public static HashMap<String, ArrayList<String>> officesAndCandidates;
     private static int portNum;
@@ -48,16 +48,13 @@ public class Client
         getCandidates(); //getFromServer
         //ClientGUI myGUI = new ClientGUI(); //set up the GUI
 
-        while(!isServerReadyToSupplyPK()) //wait until N can be supplied from server
+        while(!isServerReadyToSupplyPK()) //wait until n can be supplied from server
         {
             Thread.sleep(1000);
         }
 
-        getPK(); //get N from Server
+        getPK(); //get n from Server
         myGUI.PasswordScreen(false);
-
-
-        System.out.printf("N: %s\n", N);
 
     }
 
@@ -66,12 +63,13 @@ public class Client
 
         int i = 0; //keep track of which office
         BigInteger r;
+        os.writeUTF("sendingBallot");
+        os.writeUTF(password);
         for (HashMap.Entry<String, ArrayList<String>> entry : officesAndCandidates.entrySet())
         {
-
             do {
-                r = new BigInteger(N.bitLength() - 1, new Random()); //generate r
-            } while (!r.gcd(N).equals(BigInteger.ONE));
+                r = new BigInteger(n.bitLength() - 1, new Random()); //generate r
+            } while (!r.gcd(n).equals(BigInteger.ONE));
 
             BigInteger biVote;
             if (selected[i] == 0)
@@ -81,18 +79,17 @@ public class Client
             else
                 biVote = new BigInteger(Integer.toString((int) Math.pow(totalVoters + 1, selected[i] - 1))); //convert the vote to how it should be encrypted for homomorphic encryption to work
 
-            BigInteger encryptedVote = Crypto.encrypt(biVote, r, N); //encrypt it
+            BigInteger encryptedVote = Crypto.encrypt(biVote, r, n); //encrypt it
 
-            os.writeUTF("sendingBallot");
-            os.writeUTF(password);
-            os.writeUTF(encryptedVote.toString());
-            os.writeUTF(entry.getKey());
+            os.writeUTF(entry.getKey() + " " + encryptedVote.toString());
             os.flush();
 
             count++; //increment the times this machine has been used
-
             i++;
         }
+        os.writeUTF("END");
+        os.flush();
+
     }
 
     //routine to get the public key from the server
@@ -104,21 +101,8 @@ public class Client
         os.flush();
 
         //get information back from server
-        N = new BigInteger(is.readUTF());
+        n = new BigInteger(is.readUTF());
 
-    }
-
-
-    //routine to get the secret key from the server. This won't be in the final copy of the program.
-    private static void getSK() throws Exception
-    {
-
-        //ask server for secret key
-        os.writeUTF("getSK");
-        os.flush();
-
-        //get secret key
-        theta = new BigInteger(is.readUTF());
     }
 
     //routine to get the candidate list from server

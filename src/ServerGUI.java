@@ -42,15 +42,13 @@ public class ServerGUI
         frame.setLayout(null);
 
 
-
-
         //Welcome screen instructions
         JLabel instructions = new JLabel("Please wait while the system initializes", SwingConstants.LEFT);
         instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
         frame.getContentPane().add(instructions);
 
-        JLabel instructions2 = new JLabel("Generating N and passwords", SwingConstants.LEFT);
+        JLabel instructions2 = new JLabel("Generating n and passwords", SwingConstants.LEFT);
         instructions2.setBounds(450,150,500, 40);
         instructions2.setFont(new Font("Tacoma",Font.PLAIN, 24));
         frame.getContentPane().add(instructions2);
@@ -61,46 +59,60 @@ public class ServerGUI
 
     //who exactly is pressing the button here? I'm confused
     //to Kevin: the poll worker administrator will press the button to distribute the private key when the polls close
-    public void PressScreen() {
+    public void PressScreen(boolean doneSharingPasswords) {
 
         frame.setContentPane(new JPanel(new BorderLayout()));
         frame.setLayout(null);
 
         //Welcome screen instructions
-        JLabel instructions = new JLabel("Server Key Request", SwingConstants.LEFT);
+
+        String instructionsText;
+        if (doneSharingPasswords)
+            instructionsText = "Password Sharing Finished";
+        else
+            instructionsText = "Server Operation Panel";
+
+        JLabel instructions = new JLabel(instructionsText, SwingConstants.LEFT);
         instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 24));
         frame.getContentPane().add(instructions);
 
-        //single language option, English
-        JButton b = new JButton("Request Key");
-        b.setBounds(250,150,270, 90);
-        b.setFont(new Font("Tacoma",Font.PLAIN, 22));
-        frame.getContentPane().add(b);
+        JButton shareSKbutton = new JButton("Share Private Key");
+        shareSKbutton.setBounds(250,150,270, 90);
+        shareSKbutton.setFont(new Font("Tacoma",Font.PLAIN, 22));
+        frame.getContentPane().add(shareSKbutton);
 
-
-        //I'm not sure what else this does besides requesting a key
-        //to Kevin: I changed this a bit, it starts the sharing process. shareDecryptionKey has a message in terminal that lets you know it's waiting for the others
-        //it might be cool to implement that in the GUI: waiting for others to hit their buttons to share
-        b.addActionListener(new ActionListener() {
-
+        shareSKbutton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 try {
                     Server.shareDecryptionKey();
                     Thread.sleep(1500);
-                } catch (Exception e){System.out.printf("Decryption Key Sharing Error %s\n", e);}
+                } catch (Exception e){}
 
                 Server.getResults(); //get results
                 TotalScreen(); //show the results as totals
             }
         });
 
+        JButton sharePasswordStubsButton = new JButton("Share Passwords");
+        sharePasswordStubsButton.setBounds(550,150,270, 90);
+        sharePasswordStubsButton.setFont(new Font("Tacoma",Font.PLAIN, 22));
+        frame.getContentPane().add(sharePasswordStubsButton);
+
+        sharePasswordStubsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                try {
+                    Server.sharePasswordsWithPasswordAuth();
+                    Thread.sleep(1500);
+                } catch (Exception e){}
+
+                PressScreen(true);
+            }
+        });
+
         frame.setLayout(null);
-
-
-
-        //Show it.
         frame.setVisible(true);
     }
 

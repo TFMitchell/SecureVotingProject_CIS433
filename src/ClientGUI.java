@@ -177,7 +177,7 @@ public class ClientGUI
                     else
                         PasswordScreen(true); //try again
                 }
-                catch (Exception e) {System.out.printf("Error on 153: %s\n", e);}
+                catch (Exception e) {}
 
             }
         });
@@ -403,21 +403,12 @@ public class ClientGUI
         JLabel instructions = new JLabel("Thank you for voting!", SwingConstants.CENTER);
         instructions.setBounds(400,80,500, 40);
         instructions.setFont(new Font("Tacoma",Font.BOLD, 20));
-
-        JLabel instructions2 = new JLabel("Receipt is printing...", SwingConstants.CENTER);
-        instructions2.setBounds(400,150,500, 40);
-        instructions2.setFont(new Font("Tacoma",Font.PLAIN, 20));
-
-        JLabel instructions3 = new JLabel("Please Leave the voting area", SwingConstants.CENTER);
-        instructions3.setBounds(100,270,500, 40);
-        instructions3.setFont(new Font("Tacoma",Font.PLAIN, 20));
         frame.getContentPane().add(instructions);
-        frame.getContentPane().add(instructions2);
-        frame.getContentPane().add(instructions3);
 
-        // are we showing the "receipt", the encryptedVote
-        //I'm basing this on the numberfile video, with the idea the server lists all the receipts
-        //to Kevin: I don't really know. I think maybe we shouldn't because of the coercion argument.
+        JLabel instructions2 = new JLabel("Please Leave the voting area", SwingConstants.CENTER);
+        instructions2.setBounds(100,270,500, 40);
+        instructions2.setFont(new Font("Tacoma",Font.PLAIN, 20));
+        frame.getContentPane().add(instructions2);
 
         //Show it.
         frame.setVisible(true);

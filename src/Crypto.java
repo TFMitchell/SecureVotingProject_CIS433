@@ -61,8 +61,7 @@ public class Crypto
 
         do {
             gg = new BigInteger(N.bitCount(), rand);
-        } while (!gg.gcd(N).equals(BigInteger.ONE)
-                || Jacobi(gg, N) != 1);
+        } while (Jacobi(gg, N) != 1);
 
         return gg;
     }

@@ -17,12 +17,11 @@ import java.util.concurrent.*;
 
 public class Server
 {
-    public static String approvedPasswords[];
+    public static HashMap<String, Boolean> approvedPasswords = new HashMap<>();
     public static ArrayList<String> CandidateNamesByOffice = new ArrayList<>(); //list of offices in this format <office>, <candidate1>, <candidate2>, etc
     public static HashMap<String, BigInteger> encryptedSubtotals; //each office has one set of votes, division/remainders are used to determine each candidate's totals
 
     public static boolean hasN = false; //do we have an N value yet? used for communicating with client
-    public static boolean running = true; //running, used to shutdown listening thread
     public static boolean myTurn = false; //ensures synchronization and eliminates race conditions
 
     public static int bitLength = 16; //bitlength of p and q values
@@ -36,17 +35,17 @@ public class Server
     private static int iterationNum = 0; //keeps track of how many iterations to find a biprimal N
     private static int passwordAuthPort;
 
-    private static Random rand = new Random();
+    private static final Random rand = new Random();
 
     private static Socket socket;
     private static ObjectOutputStream os;
     private static ObjectInputStream is;
 
-    public static BigInteger N, gg; //public key and coprime
-    private static BigInteger theta, delta; //decryption key and delta, which is numServers! (used because interpolation divides by numServers, numservers-1, ..., but needs to be integers
+    public static BigInteger n, gg; //public key and coprime
+    private static BigInteger lambda, delta; //decryption key and delta, which is numServers! (used because interpolation divides by numServers, numservers-1, ..., but needs to be integers
     private static BigInteger pShareSum, qShareSum; //sums of p and q shares, to find the share of N, which can be revealed with lagrange interpolation
     private static BigInteger pq[] = new BigInteger[2]; //p and q for this server
-    public static BigInteger pShares[], qShares[], nShares[], thetaShares[], Qi[]; //shares come from each of the Servers, including itself
+    public static BigInteger pShares[], qShares[], nShares[], lambdaShares[], Qi[]; //shares come from each of the Servers, including itself
 
 
     public static float candidate_counts[][]; //this is used for displaying the results in the GUI
@@ -87,8 +86,7 @@ public class Server
         pShares = new BigInteger[numServers];
         qShares = new BigInteger[numServers];
         nShares = new BigInteger[numServers];
-        thetaShares = new BigInteger[numServers];
-        approvedPasswords = new String[totalVoters];
+        lambdaShares = new BigInteger[numServers];
         Qi = new BigInteger[numServers];
 
         if (myIndex == 1)
@@ -104,19 +102,17 @@ public class Server
         if (!readApprovedPasswordsFromFile()) //if file is empty, make new passwords and write them
             generateAndWriteApprovedPasswordsToFile();
 
-        sharePasswordsWithPasswordAuth();
-
         if (!hasN)
-            genBiprimalN(); //try to make an N
+            genBiprimalN(); //try to make an n
 
-        System.out.printf("N: %s\n", N);
+        System.out.printf("Biprimal n: %s\n", n);
         writeKeysToFile();
 
-        myGUI.PressScreen(); //is this the correct screen? or do we want the totalscreen to pop up after initialization
+        myGUI.PressScreen(false); //is this the correct screen? or do we want the totalscreen to pop up after initialization
 
     }
 
-    private static void sharePasswordsWithPasswordAuth()
+    public static void sharePasswordsWithPasswordAuth()
     {
         while (true)
         {
@@ -128,7 +124,7 @@ public class Server
 
                 os.writeUTF(Integer.toString(myIndex));
 
-                for (String password: approvedPasswords)
+                for (String password: approvedPasswords.keySet())
                 {
                     os.writeUTF(password);
                 }
@@ -145,6 +141,7 @@ public class Server
         File file = new File("approvedPasswords.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
         String line;
+        String splitLine[] = new String[2];
 
         //every line of the file is an office and its votes
         line = br.readLine();
@@ -154,7 +151,12 @@ public class Server
         int i = 0;
         do
         {
-            approvedPasswords[i++] = line;
+            splitLine = line.split(" ");
+            if (splitLine[1].equals("true"))
+                approvedPasswords.put(splitLine[0], true);
+            else
+                approvedPasswords.put(splitLine[0], false);
+
             line = br.readLine();
         } while (line != null);
 
@@ -163,20 +165,35 @@ public class Server
 
     private static void generateAndWriteApprovedPasswordsToFile() throws Exception
     {
-        FileWriter file = new FileWriter("approvedPasswords.txt");
         String digits;
 
-        for (String password : approvedPasswords)
+        for (int i = 0; i < totalVoters; i++)
         {
-            digits = "";
-            for (int i = 0; i < 2; i++)
+            do
             {
-                digits += Integer.toString(rand.nextInt(10));
-            }
-            password = digits;
-            file.write(digits + "\n");
-        }
+                digits = "";
+                for (int j = 0; j < 3; j++)
+                {
+                    digits += Integer.toString(rand.nextInt(10));
+                }
+            } while (approvedPasswords.get(digits) != null);
 
+            approvedPasswords.put(digits, false);
+        }
+        writeApprovedPasswordsToFile();
+    }
+
+    public static void writeApprovedPasswordsToFile() throws Exception
+    {
+        FileWriter file = new FileWriter("approvedPasswords.txt");
+
+        for (Map.Entry<String, Boolean> passwordAndStatus : approvedPasswords.entrySet())
+        {
+            if (passwordAndStatus.getValue())
+                file.write(passwordAndStatus.getKey() + " true\n");
+            else
+                file.write(passwordAndStatus.getKey() + " false\n");
+        }
         file.close();
     }
 
@@ -192,7 +209,7 @@ public class Server
             Polynomial qSharing = new Polynomial(2, pq[1], bitLength, rand);
 
             while (!myTurn) {
-                Thread.sleep(5);
+                Thread.sleep(1);
             }
 
             for (int i = 0; i < numServers; i++) //send the right share of p and q to each server
@@ -216,7 +233,7 @@ public class Server
 
             passTurn();
             while (!myTurn) {
-                Thread.sleep(5);
+                Thread.sleep(1);
             }
 
             //add all the shares together to make a share of N Ni
@@ -249,7 +266,7 @@ public class Server
 
             passTurn();
             while (!myTurn) {
-                Thread.sleep(5);
+                Thread.sleep(1);
             }
 
             //get ready to plug the sum of all Ni's into the secret finder
@@ -259,11 +276,11 @@ public class Server
                 tmp[i][1] = nShares[i].multiply(delta);
 
             }
-            N = Crypto.lagrangeGetSecret(tmp).divide(delta); //find N
+            n = Crypto.lagrangeGetSecret(tmp).divide(delta); //find N
 
             if (myIndex == 1) //server index one has to choose a gg
             {
-                gg = Crypto.getGG(N, rand);
+                gg = Crypto.getGG(n, rand);
                 for (int portNum : serverPortNums) //then share it with others
                 {
                     while (true) {
@@ -290,7 +307,7 @@ public class Server
                         is = new ObjectInputStream(socket.getInputStream());
                         os.writeUTF("sendingQi");
                         os.writeUTF(Integer.toString(myIndex - 1));
-                        os.writeUTF(Crypto.getQi(N, gg, pq, myIndex).toString());
+                        os.writeUTF(Crypto.getQi(n, gg, pq, myIndex).toString());
                         os.flush();
 
                         break;
@@ -300,15 +317,15 @@ public class Server
                 }
             }
 
-            System.out.printf("N: %s iteration %d\n", N, iterationNum++); //something to watch in the terminal
+            System.out.printf("N: %s iteration %d\n", n, iterationNum++); //something to watch in the terminal
 
             passTurn();
             while (!myTurn) {
-                Thread.sleep(5);
+                Thread.sleep(1);
             }
 
 
-        } while (!Crypto.isBiprimal(N, rand, Qi));
+        } while (!Crypto.isBiprimal(n, rand, Qi));
 
         passTurn();
 
@@ -351,7 +368,7 @@ public class Server
 
     public static void shareDecryptionKey() throws Exception
     {
-        BigInteger myTheta = N.add(BigInteger.ONE).subtract(pShareSum).subtract(qShareSum); //my share of theta
+        BigInteger myLambda = n.add(BigInteger.ONE).subtract(pShareSum).subtract(qShareSum); //my share of lambda
 
         while (!myTurn)
         {
@@ -370,7 +387,7 @@ public class Server
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingTheta");
                     os.writeUTF(Integer.toString(myIndex - 1));
-                    os.writeUTF(myTheta.toString());
+                    os.writeUTF(myLambda.toString());
                     os.flush();
 
                     break;
@@ -379,19 +396,17 @@ public class Server
         }
 
         passTurn();
-        while (!myTurn) { Thread.sleep(5); }
+        while (!myTurn) { Thread.sleep(1); }
 
         //adding points to a Biginteger[][] for the lagrange function
         BigInteger tmp[][] = new BigInteger[numServers][2];
         for (int i = 0; i < tmp.length; i++)
         {
             tmp[i][0] = new BigInteger(Integer.toString( i + 1));
-            tmp[i][1] = thetaShares[i].multiply(delta); //multiply by delta to prevent decimals
+            tmp[i][1] = lambdaShares[i].multiply(delta); //multiply by delta to prevent decimals
         }
 
-        theta = Crypto.lagrangeGetSecret(tmp).divide(delta);
-
-        System.out.printf("Theta: %s\n", theta);
+        lambda = Crypto.lagrangeGetSecret(tmp).divide(delta);
 
         passTurn();
     }
@@ -436,8 +451,6 @@ public class Server
 
     public static void getResults()
     {
-        System.out.printf("These are the results:\n");
-
         candidate_counts = new float [CandidateNamesByOffice.size()][];
         int row = 0;
         for (String office : CandidateNamesByOffice)
@@ -448,15 +461,13 @@ public class Server
             encryptedSubtotals.get(names[0]); //the first after splitting is the office name
             candidate_counts[row] = new float[names.length - 1];
 
-            BigInteger decryptedOffice = Crypto.decrypt(encryptedSubtotals.get(names[0]), N, theta);
+            BigInteger decryptedOffice = Crypto.decrypt(encryptedSubtotals.get(names[0]), n, lambda);
 
             BigInteger remainder = decryptedOffice;
 
             for (int i = names.length - 1; i > 0; i--)
             {
                 BigInteger whole = remainder.divide(new BigInteger( Integer.toString( (int) Math.pow(totalVoters + 1, i - 1)) ));
-                System.out.printf("%s got %d votes.\n", names[i], whole);
-
                 //save the count for access by GUI
                 candidate_counts[row][i-1] = whole.floatValue();
 
@@ -480,7 +491,7 @@ public class Server
             return;
         }
         //else
-        N = new BigInteger(line);
+        n = new BigInteger(line);
         pShareSum = new BigInteger(br.readLine());
         qShareSum = new BigInteger(br.readLine());
 
@@ -491,7 +502,7 @@ public class Server
     {
         FileWriter file  = new FileWriter("serverKeys.txt");
 
-        file.write(N.toString() + "\n");
+        file.write(n.toString() + "\n");
         file.write(pShareSum.toString() + "\n");
         file.write(qShareSum.toString() + "\n");
 
@@ -534,7 +545,7 @@ public class Server
         file.close();
     }
 
-    public static void distributeBallot(String password, BigInteger encryptedVote, String index)
+    public static void distributeBallot(String password, HashMap<String, BigInteger> ballot)
     {
         for (int portNum : serverPortNums) //Qi is a special number calculated with p and q that allows the N candidate to be checked for biprimality
         {
@@ -547,8 +558,12 @@ public class Server
                     is = new ObjectInputStream(socket.getInputStream());
                     os.writeUTF("sendingBallot");
                     os.writeUTF(password);
-                    os.writeUTF(encryptedVote.toString());
-                    os.writeUTF(index);
+
+                    for (Map.Entry<String, BigInteger> officeResult : ballot.entrySet())
+                    {
+                        os.writeUTF(officeResult.getKey() + " " + officeResult.getValue());
+                    }
+                    os.writeUTF("END");
                     os.flush();
 
                     break;
@@ -574,14 +589,14 @@ class ClientComm implements Runnable //one of these listener threads for each cl
             ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
             ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
 
-            while (Server.running)
+            while (true)
             {
 
                 line = is.readUTF();
 
                 if (line.equals("getN"))  //send public key
                 {
-                    os.writeUTF(Server.N.toString());
+                    os.writeUTF(Server.n.toString());
 
                     os.flush();
                 }
@@ -610,14 +625,20 @@ class ClientComm implements Runnable //one of these listener threads for each cl
 
                 else if (line.equals("sendingBallot"))
                 {
-                    System.out.printf("Server updating from a client\n");
                     String password = is.readUTF();
+                    String officeAndVote[];
+                    HashMap<String, BigInteger> ballot = new HashMap<>();
 
-                    BigInteger encryptedVote = new BigInteger(is.readUTF());
+                    officeAndVote = is.readUTF().split(" ");
 
-                    String index = is.readUTF();
+                    while (officeAndVote[0] != null)
+                    {
+                        officeAndVote = is.readUTF().split(" ");
 
-                    Server.distributeBallot(password, encryptedVote, index);
+                        ballot.put(officeAndVote[0], new BigInteger(officeAndVote[1]));
+                    }
+
+                    Server.distributeBallot(password, ballot);
 
                 }
 
@@ -635,7 +656,7 @@ class ClientComm implements Runnable //one of these listener threads for each cl
 
             }
 
-        }catch(Exception e) {System.out.printf("Server couldn't start connection. %s\n", e);}
+        }catch(Exception e) {}
     }
 }
 
@@ -643,7 +664,7 @@ class Listening implements Runnable //listener for other servers to use
 {
     public void run()
     {
-        while (Server.running)
+        while (true)
         {
             try
             {
@@ -678,7 +699,7 @@ class Listening implements Runnable //listener for other servers to use
                 else if (line.equals("sendingTheta"))
                 {
                     int index = Integer.parseInt(is.readUTF());
-                    Server.thetaShares[index] = new BigInteger(is.readUTF());
+                    Server.lambdaShares[index] = new BigInteger(is.readUTF());
                 }
 
                 else if (line.equals("yourTurn"))
@@ -687,45 +708,60 @@ class Listening implements Runnable //listener for other servers to use
                 }
                 else if (line.equals("sendingBallot"))
                 {
-                    System.out.printf("Server updating from fellow server\n");
                     //get the subtotal for this particular office
                     BigInteger officeSubTotal;
 
                     String myPassword = is.readUTF();
+                    boolean passwordCorrect = false;
 
-                    //if myPassword is correct
+                    for (String password : Server.approvedPasswords.keySet())
+                    {
+                        //if password matches and no vote has been recorded yet
+                        if (myPassword.equals(password)
+                                && !Server.approvedPasswords.get(password))
+                        {
+                            passwordCorrect = true;
+                            Server.approvedPasswords.put(password, true); //password is used now
+                            Server.writeApprovedPasswordsToFile(); //update the file
+                            break;
+                        }
+                    }
 
-                    BigInteger encryptedVote = new BigInteger(is.readUTF());
+                    String officeAndVote[] = is.readUTF().split(" ");
 
-                    String index = is.readUTF();
+                    while (officeAndVote[0] != null) //continue reading, even if password is wrong
+                    {
 
-                    if (Server.encryptedSubtotals.get(index) == null)
-                        officeSubTotal = new BigInteger("0");
-                    else
-                        officeSubTotal = Server.encryptedSubtotals.get(index);
-
-
-                    officeSubTotal = Crypto.addEncrypted(officeSubTotal, encryptedVote, Server.N); //add the new vote to it
+                        if (Server.encryptedSubtotals.get(officeAndVote[0]) == null)
+                            officeSubTotal = new BigInteger("0");
+                        else
+                            officeSubTotal = Server.encryptedSubtotals.get(officeAndVote[0]);
 
 
-                    Server.encryptedSubtotals.put(index, officeSubTotal); //update the hashmap
+                        officeSubTotal = Crypto.addEncrypted(officeSubTotal, new BigInteger(officeAndVote[1]), Server.n); //add the new vote to subtotal
+
+                        if (passwordCorrect)
+                            Server.encryptedSubtotals.put(officeAndVote[0], officeSubTotal); //update the hashmap
+                    }
 
                     Server.writeResultsToFile();
                 }
                 else if (line.equals("checkPartialPassword"))
                 {
                     String givenPassword = is.readUTF();
-                    boolean acceptable = false;
+                    boolean passwordCorrect = false;
 
-                    for (String possiblePassword : Server.approvedPasswords)
+                    for (String possiblePassword : Server.approvedPasswords.keySet())
                     {
-                        if (givenPassword.equals(possiblePassword))
+                        //if password matches and no vote has been recorded yet
+                        if (givenPassword.equals(possiblePassword)
+                            && !Server.approvedPasswords.get(possiblePassword))
                         {
-                            acceptable = true;
+                            passwordCorrect = true;
                             break;
                         }
                     }
-                    if (acceptable)
+                    if (passwordCorrect)
                         os.writeUTF("yes");
                     else
                         os.writeUTF("no");
@@ -737,8 +773,7 @@ class Listening implements Runnable //listener for other servers to use
                     System.out.printf("Unexpected message arrived at server: %s\n", line);
 
                 serverSocket.close();
-            } catch (Exception e) {
-                System.out.printf("Server couldn't start connection.\n"); }
+            } catch (Exception e) { }
         }
     }
 }
