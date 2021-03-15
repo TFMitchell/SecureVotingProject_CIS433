@@ -12,7 +12,7 @@ N is the total number of servers.
 C is the total number of clients.
 The PasswordAuthority's port should be specified, even if the passwords have been distributed already.
 
-Example command with parameters for running 5 servers:
+Example commands with parameters for running 5 servers:
 javaw Server 1 5 901 902 903 904 905 2 1001 1011 888 100
 javaw Server 2 5 901 902 903 904 905 2 1002 1012 888 100
 javaw Server 3 5 901 902 903 904 905 2 1003 1013 888 100
@@ -22,7 +22,7 @@ javaw Server 5 5 901 902 903 904 905 2 1005 1015 888 100
 ###The Clients:
 javaw Client <myPort>
 
-If  using the above example parameters for 5 servers, start ten clients with these commands/parameters:
+If  using the above example commands for 5 servers, you should start ten clients with these commands/parameters:
 javaw Client 1001
 javaw Client 1002
 javaw Client 1003

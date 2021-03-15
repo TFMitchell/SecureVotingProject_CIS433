@@ -733,6 +733,7 @@ class Listening implements Runnable
 
                 else if (line.equals("sendingBallot")) //receive ballot from other server
                 {
+                    Thread.sleep(500); //security measure to prevent bruteforce attacks
                     String myPassword = is.readUTF(); //get password
                     boolean passwordCorrect = false; //assume password is wrong
 
@@ -782,6 +783,7 @@ class Listening implements Runnable
                 }
                 else if (line.equals("checkPartialPassword")) //let server know that its client's password stub is acceptable
                 {
+                    Thread.sleep(500); //security measure to prevent bruteforce attacks
                     //read the password and assume it's wrong until proven otherwise
                     String givenPassword = is.readUTF();
                     boolean passwordCorrect = false;
