@@ -2,7 +2,7 @@
 This readme file contains the directions for using this software, which has three components: Server (main computer at polling place), Client (voting machine at polling place, and a text-based pseudo-password distributor (PasswordAuthority). For the project to be run on a single computer, commponents communicate via localhost on port speficied by parameters. These instructions should allow one to demonstrate the software, which illustrates the concepts of our secure voting system implementation.
 
 ##Understanding the command-line parameters:
-After navigating to the directory containing the Java classes, the component programs can be run with as follows with the specified parameters:
+After navigating to the directory containing the Java classes, the component programs can be run with the following specified parameters:
 
 ###The Servers:
 javaw Server <myIndex> <N> <serverIndex1's port> <serverIndex2's port>...<serverIndexN's port> <C> <client1's port>...<clientC's port> <PasswordAuthority's port> <total number of eligible voters>
@@ -59,9 +59,12 @@ With the servers running, run the PasswordAuthority. Then, on each server, click
 After a biprimal n has been found, the servers retain this, as well as the encrypted results of the election and approved password stubs, in their respective .txt files. These are named as follows:
 
 serverKeysi.txt (contains the n and the server's p and q values)
+
 encryptedSubtotalsi.txt (contains the offices and results, encrypted)
+
 approvedPasswordsi.txt (contains the approved password stubs for the server)
-i is the server's index
+
+where i is the server's index.
 
 None of these files need to be modified manually, but empty files should be created in the servers' working directories (the same directory by default). However, you can reset them by following the last set of instructions.
 
